@@ -1,0 +1,115 @@
+<div class="cardx span-12">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="fw-semibold">Defeat History</div>
+    <div class="small text-muted">Most recent first</div>
+  </div>
+  <div *ngIf="loading" class="text-muted">Loading…</div>
+  <div class="table-responsive" *ngIf="!loading">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Boss</th>
+          <th>Location</th>
+          <th>Defeated At (UTC)</th>
+          <th>Loots</th>
+          <th>Attendees</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of rows">
+          <td class="it-title">{{ r.bossName }}</td>
+          <td class="text-secondary">{{ r.location }}</td>
+          <td class="text-secondary">{{ r.defeatedAtUtc | date:'short' }}</td>
+          <td>
+            <span class="truncate" [title]="(r.loots || []).join(', ')">
+              <ng-container *ngFor="let l of r.loots; let last = last">{{ l }}<span *ngIf="!last">, </span></ng-container>
+            </span>
+          </td>
+          <td>
+            <span *ngFor="let a of r.attendees; let last = last">{{ a }}<span *ngIf="!last">, </span></span>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary me-2" (click)="openDetails(r)">View Details</button>
+            <button class="btn btn-sm btn-outline-primary me-2" (click)="openModal(r, 'loot')">Add Loot</button>
+            <button class="btn btn-sm btn-outline-secondary" (click)="openModal(r, 'attendee')">Add Attendance</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" style="display: {{ (modalOpen || detailsOpen) ? 'block' : 'none' }}; background: rgba(0,0,0,.4);">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <ng-container *ngIf="detailsOpen; else addForm">
+          <div class="modal-header">
+            <h5 class="modal-title">History Details</h5>
+            <button type="button" class="btn-close" (click)="closeDetails()"></button>
+          </div>
+          <div class="modal-body" *ngIf="details">
+            <div class="mb-2"><strong>Boss:</strong> {{ details.bossName }}</div>
+            <div class="mb-2"><strong>Location:</strong> {{ details.location }}</div>
+            <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc | date:'short' }}</div>
+            <hr>
+            <div class="mb-2"><strong>Loots</strong></div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              <span class="badge text-bg-light d-inline-flex align-items-center" *ngFor="let l of details.loots; let i = index">
+                {{ l }}
+                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-secondary" (click)="removeLoot(details, i)" aria-label="Remove loot">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </span>
+            </div>
+            <div class="mb-2"><strong>Attendees</strong></div>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge text-bg-light d-inline-flex align-items-center" *ngFor="let a of details.attendees; let i = index">
+                {{ a }}
+                <button type="button" class="btn btn-sm btn-link p-0 ms-2 text-secondary" (click)="removeAttendee(details, i)" aria-label="Remove attendee">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeDetails()">Close</button>
+            <button class="btn btn-outline-primary" (click)="openModal(details!, 'loot')">Add Loot</button>
+            <button class="btn btn-outline-secondary" (click)="openModal(details!, 'attendee')">Add Attendance</button>
+          </div>
+        </ng-container>
+        <ng-template #addForm>
+          <div class="modal-header">
+            <h5 class="modal-title">{{ modalMode === 'loot' ? 'Add Loot' : 'Add Attendance' }}</h5>
+            <button type="button" class="btn-close" (click)="closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3" *ngIf="modalMode === 'loot' || modalMode === 'attendee'">
+              <label class="form-label small text-muted">Upload screenshot (optional)</label>
+              <input type="file" accept="image/*" class="form-control" (change)="onImageSelected($event)">
+              <div class="small text-muted mt-1" *ngIf="ocrLoading">Analyzing image…</div>
+              <div class="small text-success mt-1" *ngIf="ocrSuggestions.length">Found {{ ocrSuggestions.length }} {{ modalMode === 'loot' ? 'loot' : 'attendee' }} candidate(s)</div>
+              <div class="small text-success" *ngIf="ocrAddedCount">Added {{ ocrAddedCount }} new {{ modalMode === 'loot' ? 'loot' : 'attendee' }}(s)</div>
+              <div class="mt-2" *ngIf="ocrSuggestions.length">
+                <div class="small text-muted mb-1">Click to use a suggestion:</div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-sm btn-outline-secondary" *ngFor="let s of ocrSuggestions" (click)="modalValue = s">{{ s }}</button>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small text-muted">{{ modalMode === 'loot' ? 'Loot' : 'Attendee' }}</label>
+              <input class="form-control" [(ngModel)]="modalValue" (keyup.enter)="submitModal()">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+            <button class="btn btn-primary" (click)="submitModal()">Add</button>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>
+
+

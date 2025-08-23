@@ -1,0 +1,6 @@
+@BossHuntingSystem.Server_HostAddress = http://localhost:5077
+
+GET {{BossHuntingSystem.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
