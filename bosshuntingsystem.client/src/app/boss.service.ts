@@ -6,24 +6,23 @@ import { map, tap } from 'rxjs/operators';
 export interface BossDto {
   id: number;
   name: string;
-  location: string;
-  respawnMinutes: number;
-  lastKilledAt: string;
+  respawnHours: number;
+  lastKilledAt: string; // UTC time from server
+  nextRespawnAt: string; // UTC time from server
+  isAvailable: boolean;
 }
 
 export interface BossCreateUpdateDto {
   name: string;
-  location: string;
-  respawnMinutes: number;
-  lastKilledAt: string;
+  respawnHours: number;
+  lastKilledAt: string | null;
 }
 
 export interface BossDefeatDto {
   id: number;
   bossId: number;
   bossName: string;
-  location: string;
-  defeatedAtUtc: string;
+  defeatedAtUtc: string | null; // ISO date string from server, null for history entries
   loots: string[];
   attendees: string[];
 }
@@ -48,6 +47,10 @@ export class BossService {
   update(id: number, payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.put<BossDto>(this.url(`/api/bosses/${id}`), payload); }
   defeat(id: number): Observable<BossDto> {
     return this.http.post<BossDto>(this.url(`/api/bosses/${id}/defeat`), {})
+      .pipe(tap(() => this.historyUpdated.next()));
+  }
+  addHistory(id: number): Observable<BossDefeatDto> {
+    return this.http.post<BossDefeatDto>(this.url(`/api/bosses/${id}/add-history`), {})
       .pipe(tap(() => this.historyUpdated.next()));
   }
   history(): Observable<BossDefeatDto[]> { return this.http.get<BossDefeatDto[]>(this.url('/api/bosses/history')); }

@@ -6,7 +6,7 @@ namespace BossHuntingSystem.Server.Services
 {
     public interface IDiscordNotificationService
     {
-        Task SendBossNotificationAsync(string bossName, string location, int minutesUntilRespawn);
+        Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn);
     }
 
     public class DiscordNotificationService : IDiscordNotificationService
@@ -22,7 +22,7 @@ namespace BossHuntingSystem.Server.Services
             _logger = logger;
         }
 
-        public async Task SendBossNotificationAsync(string bossName, string location, int minutesUntilRespawn)
+        public async Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn)
         {
             var webhookUrl = _configuration["DISCORD_WEBHOOK_URL"];
             if (string.IsNullOrEmpty(webhookUrl))
@@ -33,7 +33,7 @@ namespace BossHuntingSystem.Server.Services
 
             try
             {
-                var message = CreateBossNotificationMessage(bossName, location, minutesUntilRespawn);
+                var message = CreateBossNotificationMessage(bossName, minutesUntilRespawn);
                 var json = JsonSerializer.Serialize(message, new JsonSerializerOptions 
                 { 
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -59,7 +59,7 @@ namespace BossHuntingSystem.Server.Services
             }
         }
 
-        private DiscordWebhookMessage CreateBossNotificationMessage(string bossName, string location, int minutesUntilRespawn)
+        private DiscordWebhookMessage CreateBossNotificationMessage(string bossName, int minutesUntilRespawn)
         {
             var color = minutesUntilRespawn switch
             {
@@ -91,7 +91,7 @@ namespace BossHuntingSystem.Server.Services
                     new DiscordEmbed
                     {
                         Title = $"🐉 {bossName}",
-                        Description = $"**Location:** {location}\n**Respawns in:** {timeText}",
+                        Description = $"**Respawns in:** {timeText}",
                         Color = color,
                         Fields = new[]
                         {
@@ -101,12 +101,7 @@ namespace BossHuntingSystem.Server.Services
                                 Value = timeText,
                                 Inline = true
                             },
-                            new DiscordEmbedField
-                            {
-                                Name = "📍 Location",
-                                Value = location,
-                                Inline = true
-                            }
+
                         },
                         Footer = new DiscordEmbedFooter
                         {

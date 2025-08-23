@@ -11,9 +11,10 @@ import { BossService, BossDto, BossCreateUpdateDto } from './boss.service';
 type Boss = {
   id: number;
   name: string;
-  location: string;
-  respawnMinutes: number;
+  respawnHours: number;
   lastKilledAt: Date;
+  nextRespawnAt: Date;
+  isAvailable: boolean;
 };
 
 @Component({
@@ -45,6 +46,16 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.router.url === '/' || this.router.url === '';
   }
 
+  // Helper to get current PHT time in format suitable for datetime-local input
+  private getPhtNowForInput(): string {
+    // Get current time and format for datetime-local input (no timezone offset)
+    const now = new Date();
+    // Adjust for PHT (UTC+8) - this is a simplified approach for the input
+    const phtOffset = 8 * 60; // PHT is UTC+8
+    const phtTime = new Date(now.getTime() + phtOffset * 60 * 1000);
+    return phtTime.toISOString().slice(0, 16); // Remove seconds and Z
+  }
+
 
 
   private loadBosses(): void {
@@ -55,9 +66,10 @@ export class AppComponent implements OnInit, OnDestroy {
         this.bosses = rows.map(r => ({
           id: r.id,
           name: r.name,
-          location: r.location,
-          respawnMinutes: r.respawnMinutes,
-          lastKilledAt: new Date(r.lastKilledAt)
+          respawnHours: r.respawnHours,
+          lastKilledAt: r.lastKilledAt ? new Date(r.lastKilledAt) : new Date(),
+          nextRespawnAt: r.nextRespawnAt ? new Date(r.nextRespawnAt) : new Date(),
+          isAvailable: r.isAvailable
         }));
       },
       error: (err) => {
@@ -72,29 +84,27 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   // CRUD actions
-  public editModel: { id?: number; name: string; location: string; respawnMinutes: number; lastKilledAt: string } =
-    { name: '', location: '', respawnMinutes: 30, lastKilledAt: new Date().toISOString() };
+  public editModel: { id?: number; name: string; respawnHours: number; lastKilledAt: string } =
+    { name: '', respawnHours: 1, lastKilledAt: '' };
 
   startNew(): void {
-    this.editModel = { name: '', location: '', respawnMinutes: 30, lastKilledAt: new Date().toISOString() };
+    this.editModel = { name: '', respawnHours: 1, lastKilledAt: '' };
   }
 
   startEdit(boss: Boss): void {
     this.editModel = {
       id: boss.id,
       name: boss.name,
-      location: boss.location,
-      respawnMinutes: boss.respawnMinutes,
-      lastKilledAt: boss.lastKilledAt.toISOString()
+      respawnHours: boss.respawnHours,
+      lastKilledAt: boss.lastKilledAt.toISOString().slice(0, 16) // Format for datetime-local
     };
   }
 
   saveBoss(): void {
     const payload: BossCreateUpdateDto = {
       name: this.editModel.name,
-      location: this.editModel.location,
-      respawnMinutes: this.editModel.respawnMinutes,
-      lastKilledAt: this.editModel.lastKilledAt
+      respawnHours: this.editModel.respawnHours,
+      lastKilledAt: this.editModel.lastKilledAt.trim() === '' ? null : this.editModel.lastKilledAt
     };
     const onDone = () => { this.startNew(); this.loadBosses(); };
     if (this.editModel.id) {
@@ -120,28 +130,39 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   defeat(boss: Boss): void {
-    if (!this.isAvailable(boss)) { return; }
+    if (!boss.isAvailable) { return; }
     this.bossApi.defeat(boss.id).subscribe({
       next: (updated) => {
         // Update in place to keep UI responsive
-        boss.lastKilledAt = new Date(updated.lastKilledAt);
+        boss.lastKilledAt = updated.lastKilledAt ? new Date(updated.lastKilledAt) : new Date();
+        boss.nextRespawnAt = updated.nextRespawnAt ? new Date(updated.nextRespawnAt) : new Date();
+        boss.isAvailable = updated.isAvailable;
       },
       error: (e) => console.error(e)
     });
   }
 
-  // Boss timer helpers
+  addHistory(boss: Boss): void {
+    this.bossApi.addHistory(boss.id).subscribe({
+      next: (historyRecord) => {
+        console.log('History record added:', historyRecord);
+        // No need to update boss data since respawn timer doesn't reset
+      },
+      error: (e) => console.error(e)
+    });
+  }
+
+  // Boss timer helpers (now use server-calculated values)
   nextRespawnAt(boss: Boss): Date {
-    const next = new Date(boss.lastKilledAt.getTime() + boss.respawnMinutes * 60_000);
-    return next;
+    return boss.nextRespawnAt || new Date();
   }
 
   msUntilRespawn(boss: Boss): number {
-    const next = this.nextRespawnAt(boss).getTime();
-    return next - this.nowEpochMs;
+    return (boss.nextRespawnAt || new Date()).getTime() - this.nowEpochMs;
   }
 
   isAvailable(boss: Boss): boolean {
+    // For real-time updates, check current time against nextRespawnAt
     return this.msUntilRespawn(boss) <= 0;
   }
 

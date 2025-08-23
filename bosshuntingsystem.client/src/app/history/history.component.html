@@ -9,7 +9,7 @@
       <thead class="table-light">
         <tr>
           <th>Boss</th>
-          <th>Location</th>
+
           <th>Defeated At (UTC)</th>
           <th>Loots</th>
           <th>Attendees</th>
@@ -19,8 +19,8 @@
       <tbody>
         <tr *ngFor="let r of rows">
           <td class="it-title">{{ r.bossName }}</td>
-          <td class="text-secondary">{{ r.location }}</td>
-          <td class="text-secondary">{{ r.defeatedAtUtc | date:'short' }}</td>
+
+          <td class="text-secondary">{{ r.defeatedAtUtc ? (r.defeatedAtUtc | date:'short') : 'History Entry' }}</td>
           <td>
             <span class="truncate" [title]="(r.loots || []).join(', ')">
               <ng-container *ngFor="let l of r.loots; let last = last">{{ l }}<span *ngIf="!last">, </span></ng-container>
@@ -50,8 +50,8 @@
           </div>
           <div class="modal-body" *ngIf="details">
             <div class="mb-2"><strong>Boss:</strong> {{ details.bossName }}</div>
-            <div class="mb-2"><strong>Location:</strong> {{ details.location }}</div>
-            <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc | date:'short' }}</div>
+
+            <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc ? (details.defeatedAtUtc | date:'short') : 'History Entry (Not Actually Defeated)' }}</div>
             <hr>
             <div class="mb-2"><strong>Loots</strong></div>
             <div class="d-flex flex-wrap gap-2 mb-3">

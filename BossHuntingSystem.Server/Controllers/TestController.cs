@@ -26,7 +26,6 @@ namespace BossHuntingSystem.Server.Controllers
             {
                 await _discordService.SendBossNotificationAsync(
                     request.BossName, 
-                    request.Location ?? "Test Location", 
                     request.MinutesUntilRespawn ?? 5);
 
                 return Ok(new { message = "Discord notification sent successfully" });

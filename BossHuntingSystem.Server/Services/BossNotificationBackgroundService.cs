@@ -51,7 +51,7 @@ namespace BossHuntingSystem.Server.Services
 
             foreach (var boss in bosses)
             {
-                var respawnTime = boss.LastKilledAt.AddMinutes(boss.RespawnMinutes);
+                var respawnTime = boss.LastKilledAt.AddHours(boss.RespawnHours);
                 var timeUntilRespawn = respawnTime - now;
 
                 foreach (var notifyMinutes in NotificationMinutes)
@@ -65,7 +65,7 @@ namespace BossHuntingSystem.Server.Services
                         _logger.LogInformation("Sending Discord notification for {BossName} - {Minutes} minutes until respawn", 
                             boss.Name, notifyMinutes);
 
-                        await discordService.SendBossNotificationAsync(boss.Name, boss.Location, notifyMinutes);
+                        await discordService.SendBossNotificationAsync(boss.Name, notifyMinutes);
                         notificationTracker.RecordNotification(boss.Id, notifyMinutes, respawnTime);
                     }
                 }
