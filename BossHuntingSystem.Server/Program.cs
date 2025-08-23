@@ -71,10 +71,33 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowedOrigins");
 
+app.UseRouting();
+
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapFallbackToFile("/index.html");
+// SPA fallback routing - this should be LAST
+app.MapFallback(async context =>
+{
+    // Only serve fallback for non-API and non-static file requests
+    var path = context.Request.Path.Value?.ToLower() ?? "";
+    
+    if (path.StartsWith("/api/") || 
+        path.EndsWith(".js") || 
+        path.EndsWith(".css") || 
+        path.EndsWith(".png") || 
+        path.EndsWith(".jpg") || 
+        path.EndsWith(".ico") ||
+        path.EndsWith(".map") ||
+        path.EndsWith(".json"))
+    {
+        context.Response.StatusCode = 404;
+        return;
+    }
+    
+    context.Response.ContentType = "text/html";
+    await context.Response.SendFileAsync(Path.Combine(app.Environment.WebRootPath, "index.html"));
+});
 
 app.Run();
