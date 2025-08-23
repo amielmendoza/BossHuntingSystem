@@ -74,9 +74,13 @@ export class BossService {
   }
   // Use text responseType to avoid JSON parse on 204 No Content
   delete(id: number): Observable<void> {
+    console.log('[BossService] DELETE request to:', this.url(`/api/bosses/${id}`));
     return this.http
       .delete(this.url(`/api/bosses/${id}`), { responseType: 'text' as 'json' })
-      .pipe(map(() => void 0));
+      .pipe(
+        tap(() => console.log('[BossService] DELETE response received')),
+        map(() => void 0)
+      );
   }
 }
 

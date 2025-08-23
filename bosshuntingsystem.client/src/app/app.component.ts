@@ -105,7 +105,18 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   deleteBoss(id: number): void {
-    this.bossApi.delete(id).subscribe({ next: () => this.loadBosses(), error: (e) => console.error(e) });
+    console.log('[BossHunt] Deleting boss with ID:', id);
+    if (confirm('Are you sure you want to delete this boss?')) {
+      this.bossApi.delete(id).subscribe({ 
+        next: () => {
+          console.log('[BossHunt] Boss deleted successfully');
+          this.loadBosses();
+        }, 
+        error: (e) => {
+          console.error('[BossHunt] Error deleting boss:', e);
+        }
+      });
+    }
   }
 
   defeat(boss: Boss): void {

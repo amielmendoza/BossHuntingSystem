@@ -107,11 +107,18 @@ namespace BossHuntingSystem.Server.Controllers
         [HttpDelete("{id:int}")]
         public IActionResult Delete(int id)
         {
+            Console.WriteLine($"[BossesController] DELETE request received for ID: {id}");
             lock (Sync)
             {
                 var existing = Bosses.FirstOrDefault(b => b.Id == id);
-                if (existing == null) return NotFound();
+                if (existing == null) 
+                {
+                    Console.WriteLine($"[BossesController] Boss with ID {id} not found");
+                    return NotFound();
+                }
+                
                 Bosses.Remove(existing);
+                Console.WriteLine($"[BossesController] Boss with ID {id} deleted successfully");
                 return NoContent();
             }
         }
