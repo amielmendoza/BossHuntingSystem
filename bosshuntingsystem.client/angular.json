@@ -23,7 +23,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/bosshuntingsystem.client",
+            "outputPath": "../BossHuntingSystem.Server/wwwroot",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [

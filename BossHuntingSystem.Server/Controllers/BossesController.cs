@@ -13,6 +13,15 @@ namespace BossHuntingSystem.Server.Controllers
 
         private static readonly List<BossDefeat> History = new();
 
+        // Static method to allow background service access to boss data
+        public static List<Boss> GetBossesForNotification()
+        {
+            lock (Sync)
+            {
+                return new List<Boss>(Bosses);
+            }
+        }
+
         [HttpGet]
         public ActionResult<IEnumerable<Boss>> GetAll()
         {
