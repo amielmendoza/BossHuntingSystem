@@ -63,6 +63,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.bossApi.list().subscribe({
       next: (rows: BossDto[]) => {
         console.log('[BossHunt] /api/bosses OK', rows?.length);
+        console.log('[BossHunt] Boss IDs received:', rows?.map(r => r.id));
         this.bosses = rows.map(r => ({
           id: r.id,
           name: r.name,
@@ -71,6 +72,7 @@ export class AppComponent implements OnInit, OnDestroy {
           nextRespawnAt: r.nextRespawnAt ? new Date(r.nextRespawnAt) : new Date(),
           isAvailable: r.isAvailable
         }));
+        console.log('[BossHunt] Updated local bosses array, count:', this.bosses.length);
       },
       error: (err) => {
         console.error('[BossHunt] Failed to load bosses', err);
@@ -150,6 +152,10 @@ export class AppComponent implements OnInit, OnDestroy {
       this.bossApi.delete(id).subscribe({ 
         next: () => {
           console.log('[BossHunt] Boss deleted successfully');
+          // Remove from local array immediately for responsive UI
+          this.bosses = this.bosses.filter(b => b.id !== id);
+          console.log('[BossHunt] Removed from local array, remaining bosses:', this.bosses.length);
+          // Also refresh from server to ensure consistency
           this.loadBosses();
         }, 
         error: (e) => {

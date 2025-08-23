@@ -64,6 +64,12 @@ namespace BossHuntingSystem.Server.Controllers
             {
                 var bosses = await _context.Bosses.OrderBy(b => b.Id).ToListAsync();
                 var response = bosses.Select(ToBossResponseDto).ToList();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(response);
             }
             catch (Exception ex)
