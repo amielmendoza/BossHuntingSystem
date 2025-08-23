@@ -43,6 +43,7 @@ export class BossService {
   private url(path: string): string { return `${this.apiBase}${path}`; }
 
   list(): Observable<BossDto[]> { return this.http.get<BossDto[]>(this.url('/api/bosses')); }
+  getById(id: number): Observable<BossDto> { return this.http.get<BossDto>(this.url(`/api/bosses/${id}`)); }
   create(payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.post<BossDto>(this.url('/api/bosses'), payload); }
   update(id: number, payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.put<BossDto>(this.url(`/api/bosses/${id}`), payload); }
   defeat(id: number): Observable<BossDto> {

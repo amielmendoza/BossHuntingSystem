@@ -1,9 +1,15 @@
 using BossHuntingSystem.Server.Services;
+using BossHuntingSystem.Server.Data;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+// Configure Entity Framework
+builder.Services.AddDbContext<BossHuntingDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
@@ -20,10 +26,19 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // Production: Allow your Azure Web App domain
+            // Production: Allow your Azure Web App domain (temporarily more permissive for debugging)
             policy.WithOrigins(
                     "https://bosshuntingsystem.azurewebsites.net",
+                    "https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net",
                     "https://bosshuntingsystem-bbeeekgbb0atcngn.scm.southeastasia-01.azurewebsites.net")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+            
+            // Temporary: Add wildcard for Azure subdomains to help debug
+            policy.SetIsOriginAllowed(origin => 
+                origin.Contains("azurewebsites.net") || 
+                origin.Contains("bosshuntingsystem"))
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
@@ -68,6 +83,18 @@ else
 }
 
 app.UseHttpsRedirection();
+
+// Add request logging middleware for debugging
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers.Origin.FirstOrDefault() ?? "unknown";
+    Console.WriteLine($"[Request] {context.Request.Method} {context.Request.Path} from {origin}");
+    Console.WriteLine($"[Request] Headers: {string.Join(", ", context.Request.Headers.Select(h => $"{h.Key}:{string.Join(",", h.Value.ToArray())}"))}");
+    
+    await next();
+    
+    Console.WriteLine($"[Response] Status: {context.Response.StatusCode}");
+});
 
 app.UseCors("AllowedOrigins");
 

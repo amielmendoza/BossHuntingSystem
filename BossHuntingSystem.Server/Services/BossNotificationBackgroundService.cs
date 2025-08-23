@@ -1,4 +1,6 @@
 using BossHuntingSystem.Server.Controllers;
+using BossHuntingSystem.Server.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace BossHuntingSystem.Server.Services
 {
@@ -46,7 +48,10 @@ namespace BossHuntingSystem.Server.Services
 
         private async Task CheckBossNotifications(IDiscordNotificationService discordService, IBossNotificationTracker notificationTracker)
         {
-            var bosses = BossesController.GetBossesForNotification();
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<BossHuntingDbContext>();
+            
+            var bosses = await context.Bosses.ToListAsync();
             var now = DateTime.UtcNow;
 
             foreach (var boss in bosses)

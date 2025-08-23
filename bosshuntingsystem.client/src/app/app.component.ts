@@ -92,19 +92,49 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   startEdit(boss: Boss): void {
-    this.editModel = {
-      id: boss.id,
-      name: boss.name,
-      respawnHours: boss.respawnHours,
-      lastKilledAt: boss.lastKilledAt.toISOString().slice(0, 16) // Format for datetime-local
-    };
+    // Call API to get the latest data from server
+    this.bossApi.getById(boss.id).subscribe({
+      next: (freshBoss) => {
+        // The server sends UTC time, convert to local time for datetime-local input
+        const utcDate = new Date(freshBoss.lastKilledAt);
+        const localDateTime = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000));
+        
+        this.editModel = {
+          id: freshBoss.id,
+          name: freshBoss.name,
+          respawnHours: freshBoss.respawnHours,
+          lastKilledAt: localDateTime.toISOString().slice(0, 16) // Format for datetime-local in local time
+        };
+      },
+      error: (e) => {
+        console.error('Error fetching boss data for edit:', e);
+        // Fallback to using the UI data if API call fails
+        const utcDate = new Date(boss.lastKilledAt);
+        const localDateTime = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000));
+        
+        this.editModel = {
+          id: boss.id,
+          name: boss.name,
+          respawnHours: boss.respawnHours,
+          lastKilledAt: localDateTime.toISOString().slice(0, 16)
+        };
+      }
+    });
   }
 
   saveBoss(): void {
+    let lastKilledAtValue: string | null = null;
+    
+    // Convert local datetime-local input back to UTC ISO string for server
+    if (this.editModel.lastKilledAt.trim() !== '') {
+      const localDate = new Date(this.editModel.lastKilledAt);
+      lastKilledAtValue = localDate.toISOString();
+    }
+    
     const payload: BossCreateUpdateDto = {
       name: this.editModel.name,
       respawnHours: this.editModel.respawnHours,
-      lastKilledAt: this.editModel.lastKilledAt.trim() === '' ? null : this.editModel.lastKilledAt
+      lastKilledAt: lastKilledAtValue
     };
     const onDone = () => { this.startNew(); this.loadBosses(); };
     if (this.editModel.id) {

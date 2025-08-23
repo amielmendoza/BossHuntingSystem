@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
+using BossHuntingSystem.Server.Data;
 
 namespace BossHuntingSystem.Server.Controllers
 {
@@ -7,11 +8,12 @@ namespace BossHuntingSystem.Server.Controllers
     [Route("api/[controller]")]
     public class BossesController : ControllerBase
     {
-        private static readonly object Sync = new();
-        private static int _nextId = 1;
-        private static readonly List<Boss> Bosses = new();
+        private readonly BossHuntingDbContext _context;
 
-        private static readonly List<BossDefeat> History = new();
+        public BossesController(BossHuntingDbContext context)
+        {
+            _context = context;
+        }
 
         // Philippine Time Zone
         private static readonly TimeZoneInfo PhilippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
@@ -29,10 +31,15 @@ namespace BossHuntingSystem.Server.Controllers
 
         private static BossResponseDto ToBossResponseDto(Boss boss)
         {
-            var lastKilledAtUtc = DateTime.SpecifyKind(boss.LastKilledAt, DateTimeKind.Utc);
+            // Ensure the database value is treated as UTC
+            var lastKilledAtUtc = boss.LastKilledAt.Kind == DateTimeKind.Unspecified 
+                ? DateTime.SpecifyKind(boss.LastKilledAt, DateTimeKind.Utc)
+                : boss.LastKilledAt.ToUniversalTime();
+            
             var nextRespawnAtUtc = lastKilledAtUtc.AddHours(boss.RespawnHours);
             var currentUtc = DateTime.UtcNow;
 
+            // Send UTC times to frontend - let frontend handle timezone conversion
             return new BossResponseDto
             {
                 Id = boss.Id,
@@ -44,81 +51,117 @@ namespace BossHuntingSystem.Server.Controllers
             };
         }
 
-        // Static method to allow background service access to boss data
-        public static List<Boss> GetBossesForNotification()
+        // Static method for background service access (will need to be updated separately)
+        public static async Task<List<Boss>> GetBossesForNotificationAsync(BossHuntingDbContext context)
         {
-            lock (Sync)
-            {
-                return new List<Boss>(Bosses);
-            }
+            return await context.Bosses.ToListAsync();
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<BossResponseDto>> GetAll()
+        public async Task<ActionResult<IEnumerable<BossResponseDto>>> GetAll()
         {
-            lock (Sync)
+            try
             {
-                var response = Bosses.OrderBy(b => b.Id).Select(ToBossResponseDto).ToList();
+                var bosses = await _context.Bosses.OrderBy(b => b.Id).ToListAsync();
+                var response = bosses.Select(ToBossResponseDto).ToList();
                 return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetAll] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpGet("history")]
-        public ActionResult<IEnumerable<BossDefeat>> GetHistory()
+        public async Task<ActionResult<IEnumerable<BossDefeat>>> GetHistory()
         {
-            lock (Sync)
+            try
             {
-                return Ok(History.OrderByDescending(h => h.DefeatedAtUtc).Take(200));
+                var history = await _context.BossDefeats
+                    .OrderByDescending(h => h.DefeatedAtUtc)
+                    .Take(200)
+                    .ToListAsync();
+                return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetHistory] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpGet("history/{id:int}")]
-        public ActionResult<BossDefeat> GetHistoryById(int id)
+        public async Task<ActionResult<BossDefeat>> GetHistoryById(int id)
         {
-            lock (Sync)
+            try
             {
-                var rec = History.FirstOrDefault(h => h.Id == id);
-                if (rec == null) return NotFound();
-                return Ok(rec);
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetHistoryById] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpGet("{id:int}")]
-        public ActionResult<BossResponseDto> GetById(int id)
+        public async Task<ActionResult<BossResponseDto>> GetById(int id)
         {
-            lock (Sync)
+            try
             {
-                var boss = Bosses.FirstOrDefault(b => b.Id == id);
+                var boss = await _context.Bosses.FindAsync(id);
                 if (boss == null) return NotFound();
                 return Ok(ToBossResponseDto(boss));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetById] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost]
-        public ActionResult<BossResponseDto> Create([FromBody] BossCreateUpdateDto dto)
+        public async Task<ActionResult<BossResponseDto>> Create([FromBody] BossCreateUpdateDto dto)
         {
             Console.WriteLine($"[Create] Received request: Name='{dto?.Name}', RespawnHours={dto?.RespawnHours}, LastKilledAt='{dto?.LastKilledAt}'");
-            
-            if (dto == null) return BadRequest("Request body is null");
-            if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required");
-            if (dto.RespawnHours <= 0) return BadRequest("RespawnHours must be positive");
 
-            lock (Sync)
+            if (dto == null)
+            {
+                Console.WriteLine("[Create] Request body is null");
+                return BadRequest("Request body is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                Console.WriteLine("[Create] Name is null or empty");
+                return BadRequest("Name is required");
+            }
+
+            if (dto.RespawnHours <= 0)
+            {
+                Console.WriteLine($"[Create] Invalid RespawnHours: {dto.RespawnHours}");
+                return BadRequest("RespawnHours must be greater than 0");
+            }
+
+            try
             {
                 DateTime lastKilledAtUtc;
+
                 if (string.IsNullOrEmpty(dto.LastKilledAt))
                 {
-                    // If no time specified, use current UTC time
                     lastKilledAtUtc = DateTime.UtcNow;
                 }
                 else
                 {
-                    // Try to parse the input datetime string
                     if (DateTime.TryParse(dto.LastKilledAt, out DateTime parsedDateTime))
                     {
-                        // Treat input as PHT and convert to UTC for storage
-                        var phtTime = DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Unspecified);
-                        lastKilledAtUtc = ConvertPhtToUtc(phtTime);
+                        // Frontend sends UTC ISO string, so parse it directly as UTC
+                        lastKilledAtUtc = parsedDateTime.Kind == DateTimeKind.Unspecified 
+                            ? DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Utc)
+                            : parsedDateTime.ToUniversalTime();
                     }
                     else
                     {
@@ -128,175 +171,260 @@ namespace BossHuntingSystem.Server.Controllers
 
                 var boss = new Boss
                 {
-                    Id = _nextId++,
                     Name = dto.Name.Trim(),
                     RespawnHours = dto.RespawnHours,
                     LastKilledAt = lastKilledAtUtc
                 };
-                Bosses.Add(boss);
+
+                _context.Bosses.Add(boss);
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"[Create] Boss created successfully with ID: {boss.Id}, RespawnHours: {boss.RespawnHours}");
                 return CreatedAtAction(nameof(GetById), new { id = boss.Id }, ToBossResponseDto(boss));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Create] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPut("{id:int}")]
-        public ActionResult<BossResponseDto> Update(int id, [FromBody] BossCreateUpdateDto dto)
+        public async Task<ActionResult<BossResponseDto>> Update(int id, [FromBody] BossCreateUpdateDto dto)
         {
+            if (dto == null) return BadRequest("Request body is required");
             if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required");
-            if (dto.RespawnHours <= 0) return BadRequest("RespawnHours must be positive");
+            if (dto.RespawnHours <= 0) return BadRequest("RespawnHours must be greater than 0");
 
-            lock (Sync)
+            try
             {
-                var existing = Bosses.FirstOrDefault(b => b.Id == id);
+                var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null) return NotFound();
 
-                existing.Name = dto.Name.Trim();
-                existing.RespawnHours = dto.RespawnHours;
-                
-                if (!string.IsNullOrEmpty(dto.LastKilledAt))
+                DateTime lastKilledAtUtc;
+
+                if (string.IsNullOrEmpty(dto.LastKilledAt))
                 {
-                    // Try to parse the input datetime string
+                    lastKilledAtUtc = DateTime.UtcNow;
+                }
+                else
+                {
                     if (DateTime.TryParse(dto.LastKilledAt, out DateTime parsedDateTime))
                     {
-                        // Treat input as PHT and convert to UTC for storage
-                        var phtTime = DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Unspecified);
-                        existing.LastKilledAt = ConvertPhtToUtc(phtTime);
+                        // Frontend sends UTC ISO string, so parse it directly as UTC
+                        lastKilledAtUtc = parsedDateTime.Kind == DateTimeKind.Unspecified 
+                            ? DateTime.SpecifyKind(parsedDateTime, DateTimeKind.Utc)
+                            : parsedDateTime.ToUniversalTime();
                     }
                     else
                     {
                         return BadRequest("Invalid LastKilledAt format");
                     }
                 }
+
+                existing.Name = dto.Name.Trim();
+                existing.RespawnHours = dto.RespawnHours;
+                existing.LastKilledAt = lastKilledAtUtc;
+
+                await _context.SaveChangesAsync();
                 return Ok(ToBossResponseDto(existing));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Update] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpDelete("{id:int}")]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
             Console.WriteLine($"[BossesController] DELETE request received for ID: {id}");
-            lock (Sync)
+            Console.WriteLine($"[BossesController] Request Headers: {string.Join(", ", Request.Headers.Select(h => $"{h.Key}:{h.Value}"))}");
+
+            try
             {
-                var existing = Bosses.FirstOrDefault(b => b.Id == id);
-                if (existing == null) 
+                var existing = await _context.Bosses.FindAsync(id);
+                if (existing == null)
                 {
                     Console.WriteLine($"[BossesController] Boss with ID {id} not found");
                     return NotFound();
                 }
-                
-                Bosses.Remove(existing);
+
+                _context.Bosses.Remove(existing);
+                await _context.SaveChangesAsync();
+
                 Console.WriteLine($"[BossesController] Boss with ID {id} deleted successfully");
                 return NoContent();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Delete] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("{id:int}/defeat")]
-        public ActionResult<BossResponseDto> Defeat(int id)
+        public async Task<ActionResult<BossResponseDto>> Defeat(int id)
         {
-            lock (Sync)
+            try
             {
-                var existing = Bosses.FirstOrDefault(b => b.Id == id);
+                var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null) return NotFound();
+
                 // When a boss is defeated, we set the last kill time to now (UTC)
                 existing.LastKilledAt = DateTime.UtcNow;
-                History.Add(new BossDefeat
+
+                var defeat = new BossDefeat
                 {
-                    Id = History.Count == 0 ? 1 : History[^1].Id + 1,
                     BossId = existing.Id,
                     BossName = existing.Name,
                     DefeatedAtUtc = existing.LastKilledAt,
-                    Loots = new List<string>(),
-                    Attendees = new List<string>()
-                });
+                    LootsJson = "[]",
+                    AttendeesJson = "[]"
+                };
+
+                _context.BossDefeats.Add(defeat);
+                await _context.SaveChangesAsync();
+
                 return Ok(ToBossResponseDto(existing));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Defeat] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("{id:int}/add-history")]
-        public ActionResult<BossDefeat> AddHistory(int id)
+        public async Task<ActionResult<BossDefeat>> AddHistory(int id)
         {
-            lock (Sync)
+            try
             {
-                var existing = Bosses.FirstOrDefault(b => b.Id == id);
+                var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null) return NotFound();
-                
+
                 // Create history record without resetting the respawn timer
                 // DefeatedAtUtc is null since this is just a history entry, not an actual defeat
                 var historyRecord = new BossDefeat
                 {
-                    Id = History.Count == 0 ? 1 : History[^1].Id + 1,
                     BossId = existing.Id,
                     BossName = existing.Name,
                     DefeatedAtUtc = null, // Null because boss wasn't actually defeated
-                    Loots = new List<string>(),
-                    Attendees = new List<string>()
+                    LootsJson = "[]",
+                    AttendeesJson = "[]"
                 };
-                
-                History.Add(historyRecord);
+
+                _context.BossDefeats.Add(historyRecord);
+                await _context.SaveChangesAsync();
+
                 return Ok(historyRecord);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AddHistory] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("history/{id:int}/loot")]
-        public ActionResult<BossDefeat> AddLoot(int id, [FromBody] AddTextDto dto)
+        public async Task<ActionResult<BossDefeat>> AddLoot(int id, [FromBody] AddTextDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Text)) return BadRequest("Text is required");
-            lock (Sync)
+
+            try
             {
-                var rec = History.FirstOrDefault(h => h.Id == id);
-                if (rec == null) return NotFound();
-                rec.Loots.Add(dto.Text.Trim());
-                return Ok(rec);
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var loots = record.Loots;
+                loots.Add(dto.Text.Trim());
+                record.Loots = loots;
+
+                await _context.SaveChangesAsync();
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AddLoot] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("history/{id:int}/attendee")]
-        public ActionResult<BossDefeat> AddAttendee(int id, [FromBody] AddTextDto dto)
+        public async Task<ActionResult<BossDefeat>> AddAttendee(int id, [FromBody] AddTextDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Text)) return BadRequest("Text is required");
-            lock (Sync)
+
+            try
             {
-                var rec = History.FirstOrDefault(h => h.Id == id);
-                if (rec == null) return NotFound();
-                rec.Attendees.Add(dto.Text.Trim());
-                return Ok(rec);
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var attendees = record.Attendees;
+                attendees.Add(dto.Text.Trim());
+                record.Attendees = attendees;
+
+                await _context.SaveChangesAsync();
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AddAttendee] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpDelete("history/{id:int}/loot/{index:int}")]
-        public ActionResult<BossDefeat> RemoveLoot(int id, int index)
+        public async Task<ActionResult<BossDefeat>> RemoveLoot(int id, int index)
         {
-            lock (Sync)
+            try
             {
-                var rec = History.FirstOrDefault(h => h.Id == id);
-                if (rec == null) return NotFound();
-                if (index < 0 || index >= rec.Loots.Count) return BadRequest("Index out of range");
-                rec.Loots.RemoveAt(index);
-                return Ok(rec);
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var loots = record.Loots;
+                if (index < 0 || index >= loots.Count) return BadRequest("Index out of range");
+
+                loots.RemoveAt(index);
+                record.Loots = loots;
+
+                await _context.SaveChangesAsync();
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RemoveLoot] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpDelete("history/{id:int}/attendee/{index:int}")]
-        public ActionResult<BossDefeat> RemoveAttendee(int id, int index)
+        public async Task<ActionResult<BossDefeat>> RemoveAttendee(int id, int index)
         {
-            lock (Sync)
+            try
             {
-                var rec = History.FirstOrDefault(h => h.Id == id);
-                if (rec == null) return NotFound();
-                if (index < 0 || index >= rec.Attendees.Count) return BadRequest("Index out of range");
-                rec.Attendees.RemoveAt(index);
-                return Ok(rec);
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var attendees = record.Attendees;
+                if (index < 0 || index >= attendees.Count) return BadRequest("Index out of range");
+
+                attendees.RemoveAt(index);
+                record.Attendees = attendees;
+
+                await _context.SaveChangesAsync();
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RemoveAttendee] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
             }
         }
     }
 
-    public class Boss
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int RespawnHours { get; set; }
-        public DateTime LastKilledAt { get; set; }
-    }
-
+    // DTOs - keeping these in the same file for now but they could be moved to separate files
     public class BossCreateUpdateDto
     {
         public string Name { get; set; } = string.Empty;
@@ -314,20 +442,8 @@ namespace BossHuntingSystem.Server.Controllers
         public bool IsAvailable { get; set; }
     }
 
-    public class BossDefeat
-    {
-        public int Id { get; set; }
-        public int BossId { get; set; }
-        public string BossName { get; set; } = string.Empty;
-        public DateTime? DefeatedAtUtc { get; set; }
-        public List<string> Loots { get; set; } = new();
-        public List<string> Attendees { get; set; } = new();
-    }
-
     public class AddTextDto
     {
         public string Text { get; set; } = string.Empty;
     }
 }
-
-
