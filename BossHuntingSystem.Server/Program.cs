@@ -1,4 +1,5 @@
 using BossHuntingSystem.Server.Services;
+using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,7 +43,16 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+
+// Configure static file options with proper MIME types
+var provider = new FileExtensionContentTypeProvider();
+provider.Mappings[".js"] = "application/javascript";
+provider.Mappings[".mjs"] = "application/javascript";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
