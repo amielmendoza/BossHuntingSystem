@@ -7,6 +7,7 @@ namespace BossHuntingSystem.Server.Services
     public interface IDiscordNotificationService
     {
         Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn);
+        Task SendManualNotificationAsync(string message);
     }
 
     public class DiscordNotificationService : IDiscordNotificationService
@@ -83,9 +84,12 @@ namespace BossHuntingSystem.Server.Services
 
             var timeText = minutesUntilRespawn == 1 ? "1 minute" : $"{minutesUntilRespawn} minutes";
 
+            // Add @everyone for urgent notifications (1 and 5 minutes)
+            var mention = (minutesUntilRespawn <= 5) ? "@everyone " : "";
+
             return new DiscordWebhookMessage
             {
-                Content = $"{urgencyText} Boss respawning in **{timeText}**!",
+                Content = $"{mention}{urgencyText} Boss respawning in **{timeText}**!",
                 Embeds = new[]
                 {
                     new DiscordEmbed
@@ -111,6 +115,61 @@ namespace BossHuntingSystem.Server.Services
                     }
                 }
             };
+        }
+
+        public async Task SendManualNotificationAsync(string message)
+        {
+            var webhookUrl = _configuration["DISCORD_WEBHOOK_URL"];
+            if (string.IsNullOrEmpty(webhookUrl))
+            {
+                _logger.LogWarning("Discord webhook URL not configured");
+                return;
+            }
+
+            try
+            {
+                var discordMessage = new DiscordWebhookMessage
+                {
+                    Content = "@everyone " + message,
+                    Embeds = new[]
+                    {
+                        new DiscordEmbed
+                        {
+                            Title = "📢 Manual Notification",
+                            Description = message,
+                            Color = 0x00FF00, // Green color
+                            Footer = new DiscordEmbedFooter
+                            {
+                                Text = "Boss Hunting System - Manual"
+                            },
+                            Timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                        }
+                    }
+                };
+
+                var json = JsonSerializer.Serialize(discordMessage, new JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = false
+                });
+
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(webhookUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Manual Discord notification sent: {Message}", message);
+                }
+                else
+                {
+                    _logger.LogError("Failed to send manual Discord notification: {StatusCode} - {Content}", 
+                        response.StatusCode, await response.Content.ReadAsStringAsync());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending manual Discord notification: {Message}", message);
+            }
         }
     }
 }

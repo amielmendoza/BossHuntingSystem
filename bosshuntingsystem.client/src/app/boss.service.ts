@@ -91,6 +91,10 @@ export class BossService {
         map(() => void 0)
       );
   }
+
+  sendManualNotification(message: string): Observable<any> {
+    return this.http.post(this.url('/api/bosses/notify'), { message });
+  }
 }
 
 

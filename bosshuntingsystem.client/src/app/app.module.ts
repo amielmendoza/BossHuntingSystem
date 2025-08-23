@@ -6,12 +6,14 @@ import { FormsModule } from '@angular/forms';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HistoryComponent } from './history/history.component';
+import { NotificationsComponent } from './notifications/notifications.component';
 import { CacheInterceptor } from './cache-interceptor';
 
 @NgModule({
   declarations: [
     AppComponent,
-    HistoryComponent
+    HistoryComponent,
+    NotificationsComponent
   ],
   imports: [
     BrowserModule, HttpClientModule, FormsModule,

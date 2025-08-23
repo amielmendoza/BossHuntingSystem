@@ -1,0 +1,104 @@
+<div class="layout">
+  <!-- Left Sidebar (kept minimal) -->
+  <aside class="sidebar d-none d-md-block">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span>Boss Hunting</span>
+    </div>
+    <div class="nav-group">
+      <a class="item" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><i class="bi bi-grid-1x2"></i> <span>Dashboard</span></a>
+      <a class="item" routerLink="/history" routerLinkActive="active"><i class="bi bi-clock-history"></i> <span>History</span></a>
+      <a class="item active" routerLink="/notifications" routerLinkActive="active"><i class="bi bi-bell"></i> <span>Notifications</span></a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <section class="content">
+    <div class="topbar">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="mb-0">Manual Discord Notifications</h5>
+      </div>
+    </div>
+
+    <!-- Notification Form -->
+    <div class="cards">
+      <div class="cardx span-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="fw-semibold">Send Discord Notification</div>
+          <div class="small text-muted">Manual notifications to Discord</div>
+        </div>
+
+        <form (ngSubmit)="sendNotification()" #notificationForm="ngForm">
+          <div class="mb-3">
+            <label for="message" class="form-label">Message</label>
+            <textarea 
+              id="message"
+              class="form-control" 
+              rows="4"
+              [(ngModel)]="message" 
+              name="message"
+              placeholder="Enter your Discord notification message here..."
+              required
+              [disabled]="isSending">
+            </textarea>
+                         <div class="form-text">
+               This message will be sent to your Discord channel via webhook. <strong>&#64;everyone will be automatically added to alert all members.</strong>
+             </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button 
+              type="submit" 
+              class="btn btn-primary"
+              [disabled]="isSending || !message.trim()">
+              <i class="bi bi-send me-1"></i>
+              {{ isSending ? 'Sending...' : 'Send Notification' }}
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-outline-secondary"
+              (click)="clearResult()"
+              [disabled]="!lastResult">
+              Clear Result
+            </button>
+          </div>
+        </form>
+
+        <!-- Result Message -->
+        <div *ngIf="lastResult" class="mt-3">
+          <div class="alert" [ngClass]="lastResult.success ? 'alert-success' : 'alert-danger'">
+            <i class="bi me-2" [ngClass]="lastResult.success ? 'bi-check-circle' : 'bi-exclamation-triangle'"></i>
+            {{ lastResult.message }}
+          </div>
+        </div>
+
+        <!-- Example Messages -->
+        <div class="mt-4">
+          <h6>Example Messages:</h6>
+          <div class="row">
+                         <div class="col-md-6">
+               <div class="card border-secondary">
+                 <div class="card-body">
+                   <h6 class="card-title">Boss Alert</h6>
+                   <p class="card-text small">🚨 **Gadwa** is spawning in 5 minutes! Get ready!</p>
+                   <small class="text-muted">&#64;everyone will be automatically added</small>
+                   <button class="btn btn-sm btn-outline-primary" (click)="message = '🚨 **Gadwa** is spawning in 5 minutes! Get ready!'">Use This</button>
+                 </div>
+               </div>
+             </div>
+             <div class="col-md-6">
+               <div class="card border-secondary">
+                 <div class="card-body">
+                   <h6 class="card-title">General Announcement</h6>
+                   <p class="card-text small">📢 **Server Maintenance** - We'll be down for 30 minutes starting at 2:00 PM</p>
+                   <small class="text-muted">&#64;everyone will be automatically added</small>
+                   <button class="btn btn-sm btn-outline-primary" (click)="message = '📢 **Server Maintenance** - We\'ll be down for 30 minutes starting at 2:00 PM'">Use This</button>
+                 </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

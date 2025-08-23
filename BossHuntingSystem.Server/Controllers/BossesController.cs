@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BossHuntingSystem.Server.Data;
+using BossHuntingSystem.Server.Services;
 
 namespace BossHuntingSystem.Server.Controllers
 {
@@ -9,10 +10,12 @@ namespace BossHuntingSystem.Server.Controllers
     public class BossesController : ControllerBase
     {
         private readonly BossHuntingDbContext _context;
+        private readonly IDiscordNotificationService _discordService;
 
-        public BossesController(BossHuntingDbContext context)
+        public BossesController(BossHuntingDbContext context, IDiscordNotificationService discordService)
         {
             _context = context;
+            _discordService = discordService;
         }
 
         // Philippine Time Zone
@@ -492,6 +495,32 @@ namespace BossHuntingSystem.Server.Controllers
                 return StatusCode(500, "Database error occurred");
             }
         }
+
+        [HttpPost("notify")]
+        public async Task<IActionResult> SendManualNotification([FromBody] ManualNotificationDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Message))
+            {
+                return BadRequest("Message is required");
+            }
+
+            try
+            {
+                await _discordService.SendManualNotificationAsync(dto.Message);
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return Ok(new { success = true, message = "Notification sent successfully" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SendManualNotification] Error: {ex.Message}");
+                return StatusCode(500, "Failed to send notification");
+            }
+        }
     }
 
     // DTOs - keeping these in the same file for now but they could be moved to separate files
@@ -500,6 +529,11 @@ namespace BossHuntingSystem.Server.Controllers
         public string Name { get; set; } = string.Empty;
         public int RespawnHours { get; set; }
         public string? LastKilledAt { get; set; }
+    }
+
+    public class ManualNotificationDto
+    {
+        public string Message { get; set; } = string.Empty;
     }
 
     public class BossResponseDto
