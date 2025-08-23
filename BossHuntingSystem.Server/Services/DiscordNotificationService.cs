@@ -89,7 +89,7 @@ namespace BossHuntingSystem.Server.Services
 
             return new DiscordWebhookMessage
             {
-                Content = $"{mention}{urgencyText} Boss respawning in **{timeText}**!",
+                Content = $"{mention}{urgencyText} **{bossName}** respawning in **{timeText}**! @everyone",
                 Embeds = new[]
                 {
                     new DiscordEmbed
@@ -105,7 +105,12 @@ namespace BossHuntingSystem.Server.Services
                                 Value = timeText,
                                 Inline = true
                             },
-
+                            new DiscordEmbedField
+                            {
+                                Name = "🐉 Boss Name",
+                                Value = bossName,
+                                Inline = true
+                            }
                         },
                         Footer = new DiscordEmbedFooter
                         {
