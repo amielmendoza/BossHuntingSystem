@@ -88,6 +88,12 @@ namespace BossHuntingSystem.Server.Controllers
                     .OrderByDescending(h => h.DefeatedAtUtc)
                     .Take(200)
                     .ToListAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(history);
             }
             catch (Exception ex)
@@ -104,6 +110,12 @@ namespace BossHuntingSystem.Server.Controllers
             {
                 var record = await _context.BossDefeats.FindAsync(id);
                 if (record == null) return NotFound();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(record);
             }
             catch (Exception ex)
@@ -120,6 +132,12 @@ namespace BossHuntingSystem.Server.Controllers
             {
                 var boss = await _context.Bosses.FindAsync(id);
                 if (boss == null) return NotFound();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(ToBossResponseDto(boss));
             }
             catch (Exception ex)
@@ -186,6 +204,12 @@ namespace BossHuntingSystem.Server.Controllers
                 await _context.SaveChangesAsync();
 
                 Console.WriteLine($"[Create] Boss created successfully with ID: {boss.Id}, RespawnHours: {boss.RespawnHours}");
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return CreatedAtAction(nameof(GetById), new { id = boss.Id }, ToBossResponseDto(boss));
             }
             catch (Exception ex)
@@ -233,6 +257,12 @@ namespace BossHuntingSystem.Server.Controllers
                 existing.LastKilledAt = lastKilledAtUtc;
 
                 await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(ToBossResponseDto(existing));
             }
             catch (Exception ex)
@@ -293,6 +323,11 @@ namespace BossHuntingSystem.Server.Controllers
                 _context.BossDefeats.Add(defeat);
                 await _context.SaveChangesAsync();
 
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(ToBossResponseDto(existing));
             }
             catch (Exception ex)
@@ -324,6 +359,11 @@ namespace BossHuntingSystem.Server.Controllers
                 _context.BossDefeats.Add(historyRecord);
                 await _context.SaveChangesAsync();
 
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(historyRecord);
             }
             catch (Exception ex)
@@ -348,6 +388,12 @@ namespace BossHuntingSystem.Server.Controllers
                 record.Loots = loots;
 
                 await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(record);
             }
             catch (Exception ex)
@@ -372,6 +418,12 @@ namespace BossHuntingSystem.Server.Controllers
                 record.Attendees = attendees;
 
                 await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(record);
             }
             catch (Exception ex)
@@ -396,6 +448,12 @@ namespace BossHuntingSystem.Server.Controllers
                 record.Loots = loots;
 
                 await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(record);
             }
             catch (Exception ex)
@@ -420,6 +478,12 @@ namespace BossHuntingSystem.Server.Controllers
                 record.Attendees = attendees;
 
                 await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
                 return Ok(record);
             }
             catch (Exception ex)

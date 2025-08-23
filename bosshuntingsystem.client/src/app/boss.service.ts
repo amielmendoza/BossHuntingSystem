@@ -40,7 +40,12 @@ export class BossService {
     }
   }
 
-  private url(path: string): string { return `${this.apiBase}${path}`; }
+  private url(path: string): string { 
+    // Add cache-busting parameter to prevent caching
+    const timestamp = new Date().getTime();
+    const separator = path.includes('?') ? '&' : '?';
+    return `${this.apiBase}${path}${separator}_t=${timestamp}`; 
+  }
 
   list(): Observable<BossDto[]> { return this.http.get<BossDto[]>(this.url('/api/bosses')); }
   getById(id: number): Observable<BossDto> { return this.http.get<BossDto>(this.url(`/api/bosses/${id}`)); }
