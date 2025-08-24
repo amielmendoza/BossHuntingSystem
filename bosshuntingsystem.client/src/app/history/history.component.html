@@ -27,12 +27,17 @@
             </span>
           </td>
           <td>
-            <span *ngFor="let a of r.attendees; let last = last">{{ a }}<span *ngIf="!last">, </span></span>
+            <span class="truncate" [title]="(r.attendees || []).join(', ')">
+              <ng-container *ngFor="let a of r.attendees; let last = last">{{ a }}<span *ngIf="!last">, </span></ng-container>
+            </span>
           </td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary me-2" (click)="openDetails(r)">View Details</button>
-            <button class="btn btn-sm btn-outline-primary me-2" (click)="openModal(r, 'loot')">Add Loot</button>
-            <button class="btn btn-sm btn-outline-secondary" (click)="openModal(r, 'attendee')">Add Attendance</button>
+            <div class="d-flex gap-1 justify-content-end">
+              <button class="btn btn-sm btn-outline-primary" (click)="openDetails(r)">View Details</button>
+              <button class="btn btn-sm btn-outline-primary" (click)="openModal(r, 'loot')">Add Loot</button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="openModal(r, 'attendee')">Add Attendance</button>
+              <button class="btn btn-sm btn-outline-danger" (click)="deleteHistory(r)">Delete</button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -75,7 +80,8 @@
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeDetails()">Close</button>
             <button class="btn btn-outline-primary" (click)="openModal(details!, 'loot')">Add Loot</button>
-            <button class="btn btn-outline-secondary" (click)="openModal(details!, 'attendee')">Add Attendance</button>
+            <button class="btn btn-outline-secondary me-2" (click)="openModal(details!, 'attendee')">Add Attendance</button>
+            <button class="btn btn-outline-danger" (click)="deleteHistory(details!)">Delete Record</button>
           </div>
         </ng-container>
         <ng-template #addForm>

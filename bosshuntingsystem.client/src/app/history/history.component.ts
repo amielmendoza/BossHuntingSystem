@@ -235,6 +235,22 @@ export class HistoryComponent implements OnInit, OnDestroy {
       error: (e) => console.error('Failed to remove attendee', e)
     });
   }
+
+  deleteHistory(row: BossDefeatDto): void {
+    if (confirm(`Are you sure you want to delete this history record for ${row.bossName}?`)) {
+      this.bossApi.deleteHistory(row.id).subscribe({
+        next: () => {
+          // Remove from the list
+          this.rows = this.rows.filter(r => r.id !== row.id);
+          // Close details if it was the deleted record
+          if (this.details && this.details.id === row.id) {
+            this.closeDetails();
+          }
+        },
+        error: (e) => console.error('Failed to delete history record', e)
+      });
+    }
+  }
 }
 
 

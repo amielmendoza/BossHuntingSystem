@@ -73,6 +73,14 @@ export class BossService {
   removeAttendee(historyId: number, index: number): Observable<BossDefeatDto> {
     return this.http.delete<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee/${index}`));
   }
+  deleteHistory(historyId: number): Observable<void> {
+    return this.http
+      .delete(this.url(`/api/bosses/history/${historyId}`), { responseType: 'text' as 'json' })
+      .pipe(
+        tap(() => this.historyUpdated.next()),
+        map(() => void 0)
+      );
+  }
 
   // Vision AI extraction
   extractFromImage(file: File, mode: 'loot' | 'attendee'): Observable<{ loots: string[]; attendees: string[] }> {

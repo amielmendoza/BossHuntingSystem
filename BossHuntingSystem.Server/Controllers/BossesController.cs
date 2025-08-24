@@ -65,8 +65,13 @@ namespace BossHuntingSystem.Server.Controllers
         {
             try
             {
-                var bosses = await _context.Bosses.OrderBy(b => b.Id).ToListAsync();
+                var bosses = await _context.Bosses.ToListAsync();
                 var response = bosses.Select(ToBossResponseDto).ToList();
+                
+                // Sort by nearest respawn time (available bosses first, then by next respawn time)
+                response = response.OrderBy(b => b.IsAvailable ? 0 : 1)
+                                 .ThenBy(b => b.NextRespawnAt)
+                                 .ToList();
                 
                 // Add cache control headers to prevent caching
                 Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
@@ -492,6 +497,31 @@ namespace BossHuntingSystem.Server.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"[RemoveAttendee] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
+
+        [HttpDelete("history/{id:int}")]
+        public async Task<IActionResult> DeleteHistory(int id)
+        {
+            try
+            {
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                _context.BossDefeats.Remove(record);
+                await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DeleteHistory] Error: {ex.Message}");
                 return StatusCode(500, "Database error occurred");
             }
         }
