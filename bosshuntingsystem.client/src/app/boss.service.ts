@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
+import { environment } from '../environments/environment';
 
 export interface BossDto {
   id: number;
@@ -29,15 +30,14 @@ export interface BossDefeatDto {
 
 @Injectable({ providedIn: 'root' })
 export class BossService {
-  private apiBase: string = '';
+  private apiBase: string = environment.apiBaseUrl;
   private historyUpdated = new Subject<void>();
   historyUpdated$ = this.historyUpdated.asObservable();
 
   constructor(private http: HttpClient) {
-    // If running under Angular dev server on 53931, call the backend directly (CORS enabled)
-    if (location.port === '53931') {
-      this.apiBase = 'https://localhost:7294';
-    }
+    // The apiBase is now configured via environment files
+    // Development: points to localhost:7294
+    // Production: empty string (same domain)
   }
 
   private url(path: string): string { 

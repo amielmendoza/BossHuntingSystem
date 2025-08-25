@@ -74,11 +74,13 @@ IF EXIST "%DEPLOYMENT_SOURCE%\bosshuntingsystem.client\package.json" (
   popd
 )
 
-:: 4. Build Angular application
+:: 4. Build Angular application for production
 IF EXIST "%DEPLOYMENT_SOURCE%\bosshuntingsystem.client\package.json" (
   pushd "%DEPLOYMENT_SOURCE%\bosshuntingsystem.client"
-  call :ExecuteCmd npm run build
+  echo Building Angular application for production...
+  call :ExecuteCmd npm run build:prod
   IF !ERRORLEVEL! NEQ 0 goto error
+  echo Angular production build completed successfully.
   popd
 )
 
