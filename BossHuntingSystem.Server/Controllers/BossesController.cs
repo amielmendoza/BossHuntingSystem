@@ -391,9 +391,15 @@ namespace BossHuntingSystem.Server.Controllers
                 var record = await _context.BossDefeats.FindAsync(id);
                 if (record == null) return NotFound();
 
+                // Add to both old format (for backward compatibility) and new format
                 var loots = record.Loots;
                 loots.Add(dto.Text.Trim());
                 record.Loots = loots;
+                
+                // Add to new format with price
+                var lootItems = record.LootItems;
+                lootItems.Add(new Data.LootItem { Name = dto.Text.Trim(), Price = null });
+                record.LootItems = lootItems;
 
                 await _context.SaveChangesAsync();
                 
@@ -454,6 +460,14 @@ namespace BossHuntingSystem.Server.Controllers
 
                 loots.RemoveAt(index);
                 record.Loots = loots;
+                
+                // Also remove from new format
+                var lootItems = record.LootItems;
+                if (index < lootItems.Count)
+                {
+                    lootItems.RemoveAt(index);
+                    record.LootItems = lootItems;
+                }
 
                 await _context.SaveChangesAsync();
                 
@@ -467,6 +481,36 @@ namespace BossHuntingSystem.Server.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"[RemoveLoot] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
+
+        [HttpPut("history/{id:int}/loot/{index:int}/price")]
+        public async Task<ActionResult<BossDefeat>> UpdateLootPrice(int id, int index, [FromBody] UpdateLootPriceDto dto)
+        {
+            try
+            {
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var lootItems = record.LootItems;
+                if (index < 0 || index >= lootItems.Count) return BadRequest("Index out of range");
+
+                lootItems[index].Price = dto.Price;
+                record.LootItems = lootItems;
+
+                await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UpdateLootPrice] Error: {ex.Message}");
                 return StatusCode(500, "Database error occurred");
             }
         }
@@ -579,5 +623,17 @@ namespace BossHuntingSystem.Server.Controllers
     public class AddTextDto
     {
         public string Text { get; set; } = string.Empty;
+    }
+    
+    public class LootItemDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal? Price { get; set; }
+    }
+    
+    public class UpdateLootPriceDto
+    {
+        public int Index { get; set; }
+        public decimal? Price { get; set; }
     }
 }

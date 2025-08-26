@@ -66,7 +66,16 @@ export class HistoryComponent implements OnInit, OnDestroy {
     if (!row || !text) { return; }
     if (this.modalMode === 'loot') {
       this.bossApi.addLoot(row.id, text).subscribe({
-        next: (updated) => { row.loots = updated.loots; if (this.details && this.details.id === row.id) this.details.loots = updated.loots; this.closeModal(); if (this.details) { this.detailsOpen = true; } },
+        next: (updated) => { 
+          row.loots = updated.loots; 
+          row.lootItems = updated.lootItems;
+          if (this.details && this.details.id === row.id) {
+            this.details.loots = updated.loots;
+            this.details.lootItems = updated.lootItems;
+          }
+          this.closeModal(); 
+          if (this.details) { this.detailsOpen = true; } 
+        },
         error: (e) => console.error('Failed to add loot', e)
       });
     } else {
@@ -179,7 +188,11 @@ export class HistoryComponent implements OnInit, OnDestroy {
       try {
         const updated = await firstValueFrom(this.bossApi.addLoot(row.id, item));
         row.loots = updated.loots;
-        if (this.details && this.details.id === row.id) this.details.loots = updated.loots;
+        row.lootItems = updated.lootItems;
+        if (this.details && this.details.id === row.id) {
+          this.details.loots = updated.loots;
+          this.details.lootItems = updated.lootItems;
+        }
         lastUpdated = updated;
         this.ocrAddedCount++;
       } catch (e) {
@@ -216,10 +229,16 @@ export class HistoryComponent implements OnInit, OnDestroy {
     this.bossApi.removeLoot(row.id, index).subscribe({
       next: (updated) => {
         // Update details view
-        if (this.details && this.details.id === row.id) this.details.loots = updated.loots;
+        if (this.details && this.details.id === row.id) {
+          this.details.loots = updated.loots;
+          this.details.lootItems = updated.lootItems;
+        }
         // Update list row
         const listRow = this.rows.find(r => r.id === row.id);
-        if (listRow) listRow.loots = updated.loots;
+        if (listRow) {
+          listRow.loots = updated.loots;
+          listRow.lootItems = updated.lootItems;
+        }
       },
       error: (e) => console.error('Failed to remove loot', e)
     });
@@ -233,6 +252,23 @@ export class HistoryComponent implements OnInit, OnDestroy {
         if (listRow) listRow.attendees = updated.attendees;
       },
       error: (e) => console.error('Failed to remove attendee', e)
+    });
+  }
+
+  updateLootPrice(row: BossDefeatDto, index: number, price: number | null): void {
+    this.bossApi.updateLootPrice(row.id, index, price).subscribe({
+      next: (updated) => {
+        if (this.details && this.details.id === row.id) {
+          this.details.lootItems = updated.lootItems;
+          this.details.loots = updated.loots;
+        }
+        const listRow = this.rows.find(r => r.id === row.id);
+        if (listRow) {
+          listRow.lootItems = updated.lootItems;
+          listRow.loots = updated.loots;
+        }
+      },
+      error: (e) => console.error('Failed to update loot price', e)
     });
   }
 
@@ -250,6 +286,22 @@ export class HistoryComponent implements OnInit, OnDestroy {
         error: (e) => console.error('Failed to delete history record', e)
       });
     }
+  }
+
+  getTotalLootValue(details: BossDefeatDto): number {
+    if (!details.lootItems || details.lootItems.length === 0) {
+      return 0;
+    }
+    return details.lootItems.reduce((total, item) => {
+      return total + (item.price || 0);
+    }, 0);
+  }
+
+  onPriceChange(event: Event, details: BossDefeatDto, index: number): void {
+    const target = event.target as HTMLInputElement;
+    const value = target.value;
+    const price = value ? Number(value) : null;
+    this.updateLootPrice(details, index, price);
   }
 }
 

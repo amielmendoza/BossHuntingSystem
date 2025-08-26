@@ -57,6 +57,39 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Migrate database and populate loot items data
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<BossHuntingDbContext>();
+    context.Database.Migrate();
+    
+    // Populate LootItemsJson from existing LootsJson data
+    var recordsToUpdate = context.BossDefeats
+        .Where(r => (string.IsNullOrEmpty(r.LootItemsJson) || r.LootItemsJson == "[]") && 
+                    !string.IsNullOrEmpty(r.LootsJson) && r.LootsJson != "[]")
+        .ToList();
+    
+    foreach (var record in recordsToUpdate)
+    {
+        try
+        {
+            var loots = record.Loots;
+            var lootItems = loots.Select(loot => new BossHuntingSystem.Server.Data.LootItem { Name = loot, Price = null }).ToList();
+            record.LootItems = lootItems;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating record {record.Id}: {ex.Message}");
+        }
+    }
+    
+    if (recordsToUpdate.Any())
+    {
+        context.SaveChanges();
+        Console.WriteLine($"Updated {recordsToUpdate.Count} records with loot items data");
+    }
+}
+
 app.UseDefaultFiles();
 
 // Configure static file options with proper MIME types

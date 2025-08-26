@@ -19,6 +19,11 @@ export interface BossCreateUpdateDto {
   lastKilledAt: string | null;
 }
 
+export interface LootItemDto {
+  name: string;
+  price: number | null;
+}
+
 export interface BossDefeatDto {
   id: number;
   bossId: number;
@@ -26,6 +31,7 @@ export interface BossDefeatDto {
   defeatedAtUtc: string | null; // ISO date string from server, null for history entries
   loots: string[];
   attendees: string[];
+  lootItems?: LootItemDto[]; // New property for loot with prices
 }
 
 @Injectable({ providedIn: 'root' })
@@ -72,6 +78,9 @@ export class BossService {
   }
   removeAttendee(historyId: number, index: number): Observable<BossDefeatDto> {
     return this.http.delete<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee/${index}`));
+  }
+  updateLootPrice(historyId: number, index: number, price: number | null): Observable<BossDefeatDto> {
+    return this.http.put<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/loot/${index}/price`), { index, price });
   }
   deleteHistory(historyId: number): Observable<void> {
     return this.http
