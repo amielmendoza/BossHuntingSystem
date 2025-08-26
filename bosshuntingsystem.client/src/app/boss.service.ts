@@ -34,6 +34,29 @@ export interface BossDefeatDto {
   lootItems?: LootItemDto[]; // New property for loot with prices
 }
 
+export interface MemberDto {
+  id: number;
+  name: string;
+  combatPower: number;
+  gcashNumber?: string;
+  gcashName?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface CreateUpdateMemberDto {
+  name: string;
+  combatPower: number;
+  gcashNumber?: string;
+  gcashName?: string;
+}
+
+export interface SyncResultDto {
+  totalAttendees: number;
+  newMembersAdded: number;
+  totalMembers: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BossService {
   private apiBase: string = environment.apiBaseUrl;
@@ -81,6 +104,31 @@ export class BossService {
   }
   updateLootPrice(historyId: number, index: number, price: number | null): Observable<BossDefeatDto> {
     return this.http.put<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/loot/${index}/price`), { index, price });
+  }
+
+  // Member methods
+  getMembers(): Observable<MemberDto[]> {
+    return this.http.get<MemberDto[]>(this.url('/api/members'));
+  }
+
+  getMember(id: number): Observable<MemberDto> {
+    return this.http.get<MemberDto>(this.url(`/api/members/${id}`));
+  }
+
+  createMember(member: CreateUpdateMemberDto): Observable<MemberDto> {
+    return this.http.post<MemberDto>(this.url('/api/members'), member);
+  }
+
+  updateMember(id: number, member: CreateUpdateMemberDto): Observable<MemberDto> {
+    return this.http.put<MemberDto>(this.url(`/api/members/${id}`), member);
+  }
+
+  deleteMember(id: number): Observable<void> {
+    return this.http.delete<void>(this.url(`/api/members/${id}`));
+  }
+
+  syncMembersFromAttendance(): Observable<SyncResultDto> {
+    return this.http.post<SyncResultDto>(this.url('/api/members/sync-from-attendance'), {});
   }
   deleteHistory(historyId: number): Observable<void> {
     return this.http

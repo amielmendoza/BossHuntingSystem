@@ -427,9 +427,27 @@ namespace BossHuntingSystem.Server.Controllers
                 var record = await _context.BossDefeats.FindAsync(id);
                 if (record == null) return NotFound();
 
+                var attendeeName = dto.Text.Trim();
                 var attendees = record.Attendees;
-                attendees.Add(dto.Text.Trim());
+                attendees.Add(attendeeName);
                 record.Attendees = attendees;
+
+                // Check if member already exists, if not, add them to members table
+                var existingMember = await _context.Members.FirstOrDefaultAsync(m => m.Name.ToLower() == attendeeName.ToLower());
+                if (existingMember == null)
+                {
+                    var newMember = new Data.Member
+                    {
+                        Name = attendeeName,
+                        CombatPower = 0, // Default combat power
+                        GcashNumber = null,
+                        GcashName = null,
+                        CreatedAtUtc = DateTime.UtcNow,
+                        UpdatedAtUtc = DateTime.UtcNow
+                    };
+                    _context.Members.Add(newMember);
+                    Console.WriteLine($"[AddAttendee] Auto-created new member: {attendeeName}");
+                }
 
                 await _context.SaveChangesAsync();
                 
