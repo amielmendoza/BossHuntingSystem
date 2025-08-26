@@ -613,6 +613,45 @@ namespace BossHuntingSystem.Server.Controllers
                 return StatusCode(500, "Failed to send notification");
             }
         }
+
+        [HttpGet("debug/ip")]
+        public IActionResult GetClientIp()
+        {
+            var clientIp = GetClientIpAddress();
+            var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
+            var connectionIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            return Ok(new
+            {
+                ClientIp = clientIp,
+                ForwardedFor = forwardedFor,
+                RealIp = realIp,
+                ConnectionIp = connectionIp,
+                UserAgent = Request.Headers["User-Agent"].FirstOrDefault(),
+                AllHeaders = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())
+            });
+        }
+
+        private string GetClientIpAddress()
+        {
+            // Check for forwarded headers (for when behind proxy/load balancer)
+            var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedFor))
+            {
+                // X-Forwarded-For can contain multiple IPs, take the first one
+                return forwardedFor.Split(',')[0].Trim();
+            }
+
+            var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(realIp))
+            {
+                return realIp;
+            }
+
+            // Fallback to connection remote IP
+            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
     }
 
     // DTOs - keeping these in the same file for now but they could be moved to separate files

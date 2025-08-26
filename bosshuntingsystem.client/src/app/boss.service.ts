@@ -57,6 +57,12 @@ export interface SyncResultDto {
   totalMembers: number;
 }
 
+export interface IpRestrictionInfo {
+  clientIp: string;
+  isRestricted: boolean;
+  restrictedEndpoints: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class BossService {
   private apiBase: string = environment.apiBaseUrl;
@@ -159,6 +165,11 @@ export class BossService {
 
   sendManualNotification(message: string): Observable<any> {
     return this.http.post(this.url('/api/bosses/notify'), { message });
+  }
+
+  // IP restriction check
+  checkIpRestrictions(): Observable<IpRestrictionInfo> {
+    return this.http.get<IpRestrictionInfo>(this.url('/api/bosses/debug/ip'));
   }
 }
 

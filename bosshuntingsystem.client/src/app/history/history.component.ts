@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { BossDefeatDto, BossService } from '../boss.service';
+import { BossDefeatDto, BossService, IpRestrictionInfo } from '../boss.service';
 import { Subscription, firstValueFrom } from 'rxjs';
 import Tesseract from 'tesseract.js';
 
@@ -22,10 +22,17 @@ export class HistoryComponent implements OnInit, OnDestroy {
   ocrLoading = false;
   ocrSuggestions: string[] = [];
   ocrAddedCount = 0;
+  
+  // IP restriction state
+  ipRestrictionInfo: IpRestrictionInfo | null = null;
+  isIpRestricted = false;
 
   constructor(private bossApi: BossService) {}
 
   ngOnInit(): void {
+    // Check IP restrictions first
+    this.checkIpRestrictions();
+    
     const load = () => this.bossApi.history().subscribe({
       next: r => { this.rows = r; this.loading = false; },
       error: e => { console.error('Failed to load history', e); this.loading = false; }
@@ -36,6 +43,22 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+  }
+
+  checkIpRestrictions(): void {
+    this.bossApi.checkIpRestrictions().subscribe({
+      next: (info) => {
+        this.ipRestrictionInfo = info;
+        // Check if any restricted endpoints are being accessed
+        this.isIpRestricted = info.isRestricted;
+        console.log('[History] IP restriction check:', info);
+      },
+      error: (e) => {
+        console.error('Failed to check IP restrictions', e);
+        // If we can't check, assume not restricted to be safe
+        this.isIpRestricted = false;
+      }
+    });
   }
 
   openModal(row: BossDefeatDto, mode: 'loot' | 'attendee'): void {

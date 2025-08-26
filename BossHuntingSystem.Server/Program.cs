@@ -1,5 +1,7 @@
 using BossHuntingSystem.Server.Services;
 using BossHuntingSystem.Server.Data;
+using BossHuntingSystem.Server.Models;
+using BossHuntingSystem.Server.Middleware;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,6 +52,19 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<IDiscordNotificationService, DiscordNotificationService>();
 builder.Services.AddSingleton<IBossNotificationTracker, BossNotificationTracker>();
 builder.Services.AddHostedService<BossNotificationBackgroundService>();
+
+// IP Restrictions configuration
+try
+{
+    builder.Services.Configure<IpRestrictionsConfig>(
+        builder.Configuration.GetSection("IpRestrictions"));
+    Console.WriteLine("[Program] IP Restrictions configuration loaded successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Program] Error loading IP Restrictions configuration: {ex.Message}");
+    // Continue without IP restrictions if configuration fails
+}
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -116,6 +131,18 @@ else
 }
 
 app.UseHttpsRedirection();
+
+// Add IP restriction middleware (with error handling)
+try
+{
+    app.UseMiddleware<IpRestrictionMiddleware>();
+    Console.WriteLine("[Program] IP restriction middleware registered successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Program] Error registering IP restriction middleware: {ex.Message}");
+    // Continue without IP restrictions if middleware fails
+}
 
 // Add request logging middleware for debugging
 app.Use(async (context, next) =>
