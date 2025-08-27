@@ -1,28 +1,33 @@
-﻿<div class="layout">
+﻿<div class="d-flex p-2 gap-2 w-full vh-100">
   <!-- Left Sidebar (kept minimal) -->
-  <aside class="sidebar d-none d-md-block">
+  <aside class="sidebar d-none d-md-block w-10 h-100" [ngClass]="{'w-auto': menu.isOpen}">
     <div class="brand">
-      <span class="brand-mark"></span>
-      <span>Boss Hunting</span>
+      <button class="btn" (click)="openMenu()">
+        <i class="bi bi-list"></i>
+      </button>
+      <span [ngClass]="{'d-none': menu.isOpen}">PARAK</span>
     </div>
     <div class="nav-group">
-      <a class="item" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><i class="bi bi-grid-1x2"></i> <span>Dashboard</span></a>
-      <a class="item" routerLink="/history" routerLinkActive="active"><i class="bi bi-clock-history"></i> <span>History</span></a>
-      <a class="item" routerLink="/notifications" routerLinkActive="active"><i class="bi bi-bell"></i> <span>Notifications</span></a>
+      <a class="item" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <i class="bi bi-grid-1x2"></i> 
+        <span [ngClass]="{'d-none': menu.isOpen}">Dashboard</span>
+      </a>
+      <a class="item" routerLink="/history" routerLinkActive="active">
+        <i class="bi bi-clock-history"></i> 
+        <span [ngClass]="{'d-none': menu.isOpen}">History</span>
+      </a>
+      <a class="item" routerLink="/notifications" routerLinkActive="active">
+        <i class="bi bi-bell"></i> 
+        <span [ngClass]="{'d-none': menu.isOpen}">Notifications</span>
+      </a>
     </div>
   </aside>
 
   <!-- Main Content -->
-  <section class="content">
-    <div class="topbar">
+  <section class="w-100 h-100 overflow-auto">
+    <div class="topbar w-100">
       <div class="d-flex align-items-center gap-2">
-        <h5 class="mb-0">Dashboard</h5>
-      </div>
-      <div class="d-none d-md-flex align-items-center gap-2">
-        <div class="input-group" style="width: 320px;">
-          <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-          <input type="search" class="form-control border-start-0" placeholder="Search…">
-        </div>
+        <h5 class="mb-0">{{name.route}}</h5>
       </div>
     </div>
 
@@ -73,7 +78,7 @@
                 <th class="text-end">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="">
               <tr *ngFor="let b of bosses">
                 <td><span class="bullet"></span></td>
                 <td class="it-title">{{ b.name }}</td>
@@ -86,10 +91,12 @@
                 </td>
 
                 <td class="text-end">
-                  <button class="btn btn-sm btn-success me-1" [disabled]="!isAvailable(b)" (click)="defeat(b)">Defeat</button>
-                  <button class="btn btn-sm btn-info me-1" (click)="addHistory(b)">History</button>
-                  <button class="btn btn-sm btn-outline-secondary me-1" (click)="startEdit(b)">Edit</button>
-                  <button class="btn btn-sm btn-outline-danger" (click)="deleteBoss(b.id)">Delete</button>
+                  <div class="w-100">
+                    <button class="btn btn-sm btn-success me-1" [disabled]="!isAvailable(b)" (click)="defeat(b)">Defeat</button>
+                    <button class="btn btn-sm btn-info me-1" (click)="addHistory(b)">History</button>
+                    <button class="btn btn-sm btn-outline-secondary me-1" (click)="startEdit(b)">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="deleteBoss(b.id)">Delete</button>
+                  </div>
                 </td>
               </tr>
             </tbody>

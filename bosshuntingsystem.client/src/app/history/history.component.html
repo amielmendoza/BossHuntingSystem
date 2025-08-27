@@ -1,8 +1,4 @@
-<div class="cardx span-12">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="fw-semibold">Defeat History</div>
-    <div class="small text-muted">Most recent first</div>
-  </div>
+<div class="cardx span-12" class="overflow-auto">
   <div *ngIf="loading" class="text-muted">Loading…</div>
   <div class="table-responsive" *ngIf="!loading">
     <table class="table align-middle mb-0">
@@ -45,7 +41,7 @@
   </div>
 
   <!-- Modal -->
-  <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" style="display: {{ (modalOpen || detailsOpen) ? 'block' : 'none' }}; background: rgba(0,0,0,.4);">
+  <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" [style.display]="(modalOpen || detailsOpen) ? 'block' : 'none'" style="background: rgba(0,0,0,.4);">
     <div class="modal-dialog">
       <div class="modal-content">
         <ng-container *ngIf="detailsOpen; else addForm">
