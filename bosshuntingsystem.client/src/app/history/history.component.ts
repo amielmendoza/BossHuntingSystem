@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { BossDefeatDto, BossService, IpRestrictionInfo } from '../boss.service';
+import { BossDefeatDto, MemberDto, BossService, IpRestrictionInfo } from '../boss.service';
 import { Subscription, firstValueFrom } from 'rxjs';
 import Tesseract from 'tesseract.js';
 
@@ -9,6 +9,7 @@ import Tesseract from 'tesseract.js';
   styleUrls: ['./history.component.css']
 })
 export class HistoryComponent implements OnInit, OnDestroy {
+  members: MemberDto[] = [];
   rows: BossDefeatDto[] = [];
   loading = true;
   private sub?: Subscription;
@@ -32,6 +33,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Check IP restrictions first
     this.checkIpRestrictions();
+    this.loadMembers();
     
     const load = () => this.bossApi.history().subscribe({
       next: r => { this.rows = r; this.loading = false; },
@@ -61,6 +63,22 @@ export class HistoryComponent implements OnInit, OnDestroy {
     });
   }
 
+  checkCp(): void {
+    if (this.details?.attendees) {
+      const cpValues: number[] = [];
+      this.details.attendees.forEach((attendee) => {
+        const match = this.members.find(m => m.name.toLowerCase() === attendee.toLowerCase());
+        if (typeof match?.combatPower === 'number') {
+          cpValues.push(match.combatPower);
+        } else {
+          cpValues.push(0)
+        }
+      });
+      (this.details as any).combatPower = cpValues;
+    }
+    console.log(this.details);
+  }
+
   openModal(row: BossDefeatDto, mode: 'loot' | 'attendee'): void {
     this.activeRow = row;
     this.modalMode = mode;
@@ -76,7 +94,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   openDetails(row: BossDefeatDto): void {
     this.bossApi.historyById(row.id).subscribe({
-      next: r => { this.details = r; this.detailsOpen = true; },
+      next: r => { this.details = r; this.detailsOpen = true; this.checkCp(); },
       error: e => console.error('Failed to load details', e)
     });
   }
@@ -248,6 +266,8 @@ export class HistoryComponent implements OnInit, OnDestroy {
     }
   }
 
+
+
   removeLoot(row: BossDefeatDto, index: number): void {
     this.bossApi.removeLoot(row.id, index).subscribe({
       next: (updated) => {
@@ -325,6 +345,21 @@ export class HistoryComponent implements OnInit, OnDestroy {
     const value = target.value;
     const price = value ? Number(value) : null;
     this.updateLootPrice(details, index, price);
+  }
+
+  loadMembers(): void {
+    this.loading = true;
+    
+    this.bossApi.getMembers().subscribe({
+      next: (members) => {
+        this.members = members;
+        this.loading = false;
+      },
+      error: (e) => {
+        console.error('Failed to load members', e);
+        this.loading = false;
+      }
+    });
   }
 }
 

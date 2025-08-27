@@ -57,7 +57,7 @@ export class MembersComponent implements OnInit {
       }
     });
   }
-
+  
   openCreateModal(): void {
     this.createForm = {
       name: '',

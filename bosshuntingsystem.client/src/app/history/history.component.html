@@ -68,7 +68,7 @@
   </div>
 
   <!-- Modal -->
-  <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" style="display: {{ (modalOpen || detailsOpen) ? 'block' : 'none' }}; background: rgba(0,0,0,.4);">
+  <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" [style.display]="(modalOpen || detailsOpen) ? 'block' : 'none'" style="background: rgba(0,0,0,.4);">
     <div class="modal-dialog">
       <div class="modal-content">
         <ng-container *ngIf="detailsOpen; else addForm">
@@ -148,6 +148,7 @@
                     <tr>
                       <th>#</th>
                       <th>Player Name</th>
+                      <th>Combat Power</th>
                       <th class="text-end">Actions</th>
                     </tr>
                   </thead>
@@ -155,6 +156,7 @@
                     <tr *ngFor="let attendee of details.attendees; let i = index">
                       <td class="text-muted">{{ i + 1 }}</td>
                       <td>{{ attendee }}</td>
+                      <td>{{ details.combatPower[i] }}</td>
                       <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                 (click)="removeAttendee(details, i)" 

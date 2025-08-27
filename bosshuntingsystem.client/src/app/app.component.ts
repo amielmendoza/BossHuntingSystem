@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { interval, Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { BossService, BossDto, BossCreateUpdateDto } from './boss.service';
 
 
@@ -17,6 +18,18 @@ type Boss = {
   isAvailable: boolean;
 };
 
+type Menu = {
+  isOpen: boolean;
+};
+
+type Name = {
+  route: string;
+};
+
+type Modal = {
+  isOpen: boolean;
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -24,6 +37,8 @@ type Boss = {
 })
 export class AppComponent implements OnInit, OnDestroy {
   public bosses: Boss[] = [];
+  public menu: Menu = { isOpen: false };
+  public name: Name = { route: '' };
   private timerSubscription?: Subscription;
   private nowEpochMs: number = Date.now();
 
@@ -32,6 +47,15 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     console.log('[BossHunt] AppComponent init');
     this.loadBosses();
+    this.updateRouteName();
+    
+    // Subscribe to router events to update route name
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.updateRouteName();
+    });
+    
     this.timerSubscription = interval(1000).subscribe(() => {
       this.nowEpochMs = Date.now();
     });
@@ -39,6 +63,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.timerSubscription?.unsubscribe();
+  }
+
+  // Update route name for display
+  updateRouteName(): void {
+    const currentRoute = this.router.url;
+    if (currentRoute === '/' || currentRoute === '') {
+      this.name.route = 'Dashboard';
+    } else if (currentRoute === '/history') {
+      this.name.route = 'History';
+    } else if (currentRoute === '/notifications') {
+      this.name.route = 'Notifications';
+    } else {
+      this.name.route = 'Unknown';
+    }
   }
 
   // Routing helper: show dashboard content only on base route
@@ -186,6 +224,10 @@ export class AppComponent implements OnInit, OnDestroy {
       },
       error: (e) => console.error(e)
     });
+  }
+
+  openMenu(): void {
+    this.menu.isOpen = !this.menu.isOpen;
   }
 
   // Boss timer helpers (now use server-calculated values)
