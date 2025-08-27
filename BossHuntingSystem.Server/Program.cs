@@ -1,5 +1,7 @@
 using BossHuntingSystem.Server.Services;
 using BossHuntingSystem.Server.Data;
+using BossHuntingSystem.Server.Models;
+using BossHuntingSystem.Server.Middleware;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,11 +53,57 @@ builder.Services.AddHttpClient<IDiscordNotificationService, DiscordNotificationS
 builder.Services.AddSingleton<IBossNotificationTracker, BossNotificationTracker>();
 builder.Services.AddHostedService<BossNotificationBackgroundService>();
 
+// IP Restrictions configuration
+try
+{
+    builder.Services.Configure<IpRestrictionsConfig>(
+        builder.Configuration.GetSection("IpRestrictions"));
+    Console.WriteLine("[Program] IP Restrictions configuration loaded successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Program] Error loading IP Restrictions configuration: {ex.Message}");
+    // Continue without IP restrictions if configuration fails
+}
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Migrate database and populate loot items data
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<BossHuntingDbContext>();
+    context.Database.Migrate();
+    
+    // Populate LootItemsJson from existing LootsJson data
+    var recordsToUpdate = context.BossDefeats
+        .Where(r => (string.IsNullOrEmpty(r.LootItemsJson) || r.LootItemsJson == "[]") && 
+                    !string.IsNullOrEmpty(r.LootsJson) && r.LootsJson != "[]")
+        .ToList();
+    
+    foreach (var record in recordsToUpdate)
+    {
+        try
+        {
+            var loots = record.Loots;
+            var lootItems = loots.Select(loot => new BossHuntingSystem.Server.Data.LootItem { Name = loot, Price = null }).ToList();
+            record.LootItems = lootItems;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating record {record.Id}: {ex.Message}");
+        }
+    }
+    
+    if (recordsToUpdate.Any())
+    {
+        context.SaveChanges();
+        Console.WriteLine($"Updated {recordsToUpdate.Count} records with loot items data");
+    }
+}
 
 app.UseDefaultFiles();
 
@@ -83,6 +131,18 @@ else
 }
 
 app.UseHttpsRedirection();
+
+// Add IP restriction middleware (with error handling)
+try
+{
+    app.UseMiddleware<IpRestrictionMiddleware>();
+    Console.WriteLine("[Program] IP restriction middleware registered successfully");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Program] Error registering IP restriction middleware: {ex.Message}");
+    // Continue without IP restrictions if middleware fails
+}
 
 // Add request logging middleware for debugging
 app.Use(async (context, next) =>

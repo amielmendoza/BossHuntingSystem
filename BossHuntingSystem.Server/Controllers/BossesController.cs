@@ -391,9 +391,15 @@ namespace BossHuntingSystem.Server.Controllers
                 var record = await _context.BossDefeats.FindAsync(id);
                 if (record == null) return NotFound();
 
+                // Add to both old format (for backward compatibility) and new format
                 var loots = record.Loots;
                 loots.Add(dto.Text.Trim());
                 record.Loots = loots;
+                
+                // Add to new format with price
+                var lootItems = record.LootItems;
+                lootItems.Add(new Data.LootItem { Name = dto.Text.Trim(), Price = null });
+                record.LootItems = lootItems;
 
                 await _context.SaveChangesAsync();
                 
@@ -421,9 +427,27 @@ namespace BossHuntingSystem.Server.Controllers
                 var record = await _context.BossDefeats.FindAsync(id);
                 if (record == null) return NotFound();
 
+                var attendeeName = dto.Text.Trim();
                 var attendees = record.Attendees;
-                attendees.Add(dto.Text.Trim());
+                attendees.Add(attendeeName);
                 record.Attendees = attendees;
+
+                // Check if member already exists, if not, add them to members table
+                var existingMember = await _context.Members.FirstOrDefaultAsync(m => m.Name.ToLower() == attendeeName.ToLower());
+                if (existingMember == null)
+                {
+                    var newMember = new Data.Member
+                    {
+                        Name = attendeeName,
+                        CombatPower = 0, // Default combat power
+                        GcashNumber = null,
+                        GcashName = null,
+                        CreatedAtUtc = DateTime.UtcNow,
+                        UpdatedAtUtc = DateTime.UtcNow
+                    };
+                    _context.Members.Add(newMember);
+                    Console.WriteLine($"[AddAttendee] Auto-created new member: {attendeeName}");
+                }
 
                 await _context.SaveChangesAsync();
                 
@@ -454,6 +478,14 @@ namespace BossHuntingSystem.Server.Controllers
 
                 loots.RemoveAt(index);
                 record.Loots = loots;
+                
+                // Also remove from new format
+                var lootItems = record.LootItems;
+                if (index < lootItems.Count)
+                {
+                    lootItems.RemoveAt(index);
+                    record.LootItems = lootItems;
+                }
 
                 await _context.SaveChangesAsync();
                 
@@ -467,6 +499,36 @@ namespace BossHuntingSystem.Server.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"[RemoveLoot] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
+
+        [HttpPut("history/{id:int}/loot/{index:int}/price")]
+        public async Task<ActionResult<BossDefeat>> UpdateLootPrice(int id, int index, [FromBody] UpdateLootPriceDto dto)
+        {
+            try
+            {
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var lootItems = record.LootItems;
+                if (index < 0 || index >= lootItems.Count) return BadRequest("Index out of range");
+
+                lootItems[index].Price = dto.Price;
+                record.LootItems = lootItems;
+
+                await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UpdateLootPrice] Error: {ex.Message}");
                 return StatusCode(500, "Database error occurred");
             }
         }
@@ -551,6 +613,45 @@ namespace BossHuntingSystem.Server.Controllers
                 return StatusCode(500, "Failed to send notification");
             }
         }
+
+        [HttpGet("debug/ip")]
+        public IActionResult GetClientIp()
+        {
+            var clientIp = GetClientIpAddress();
+            var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
+            var connectionIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            return Ok(new
+            {
+                ClientIp = clientIp,
+                ForwardedFor = forwardedFor,
+                RealIp = realIp,
+                ConnectionIp = connectionIp,
+                UserAgent = Request.Headers["User-Agent"].FirstOrDefault(),
+                AllHeaders = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())
+            });
+        }
+
+        private string GetClientIpAddress()
+        {
+            // Check for forwarded headers (for when behind proxy/load balancer)
+            var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedFor))
+            {
+                // X-Forwarded-For can contain multiple IPs, take the first one
+                return forwardedFor.Split(',')[0].Trim();
+            }
+
+            var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(realIp))
+            {
+                return realIp;
+            }
+
+            // Fallback to connection remote IP
+            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
     }
 
     // DTOs - keeping these in the same file for now but they could be moved to separate files
@@ -579,5 +680,17 @@ namespace BossHuntingSystem.Server.Controllers
     public class AddTextDto
     {
         public string Text { get; set; } = string.Empty;
+    }
+    
+    public class LootItemDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal? Price { get; set; }
+    }
+    
+    public class UpdateLootPriceDto
+    {
+        public int Index { get; set; }
+        public decimal? Price { get; set; }
     }
 }

@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { BossDefeatDto, BossService } from '../boss.service';
+import { BossDefeatDto, MemberDto, BossService, IpRestrictionInfo } from '../boss.service';
 import { Subscription, firstValueFrom } from 'rxjs';
 import Tesseract from 'tesseract.js';
 
@@ -9,6 +9,7 @@ import Tesseract from 'tesseract.js';
   styleUrls: ['./history.component.css']
 })
 export class HistoryComponent implements OnInit, OnDestroy {
+  members: MemberDto[] = [];
   rows: BossDefeatDto[] = [];
   loading = true;
   private sub?: Subscription;
@@ -22,10 +23,18 @@ export class HistoryComponent implements OnInit, OnDestroy {
   ocrLoading = false;
   ocrSuggestions: string[] = [];
   ocrAddedCount = 0;
+  
+  // IP restriction state
+  ipRestrictionInfo: IpRestrictionInfo | null = null;
+  isIpRestricted = false;
 
   constructor(private bossApi: BossService) {}
 
   ngOnInit(): void {
+    // Check IP restrictions first
+    this.checkIpRestrictions();
+    this.loadMembers();
+    
     const load = () => this.bossApi.history().subscribe({
       next: r => { this.rows = r; this.loading = false; },
       error: e => { console.error('Failed to load history', e); this.loading = false; }
@@ -36,6 +45,38 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+  }
+
+  checkIpRestrictions(): void {
+    this.bossApi.checkIpRestrictions().subscribe({
+      next: (info) => {
+        this.ipRestrictionInfo = info;
+        // Check if any restricted endpoints are being accessed
+        this.isIpRestricted = info.isRestricted;
+        console.log('[History] IP restriction check:', info);
+      },
+      error: (e) => {
+        console.error('Failed to check IP restrictions', e);
+        // If we can't check, assume not restricted to be safe
+        this.isIpRestricted = false;
+      }
+    });
+  }
+
+  checkCp(): void {
+    if (this.details?.attendees) {
+      const cpValues: number[] = [];
+      this.details.attendees.forEach((attendee) => {
+        const match = this.members.find(m => m.name.toLowerCase() === attendee.toLowerCase());
+        if (typeof match?.combatPower === 'number') {
+          cpValues.push(match.combatPower);
+        } else {
+          cpValues.push(0)
+        }
+      });
+      (this.details as any).combatPower = cpValues;
+    }
+    console.log(this.details);
   }
 
   openModal(row: BossDefeatDto, mode: 'loot' | 'attendee'): void {
@@ -53,7 +94,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   openDetails(row: BossDefeatDto): void {
     this.bossApi.historyById(row.id).subscribe({
-      next: r => { this.details = r; this.detailsOpen = true; },
+      next: r => { this.details = r; this.detailsOpen = true; this.checkCp(); },
       error: e => console.error('Failed to load details', e)
     });
   }
@@ -66,7 +107,16 @@ export class HistoryComponent implements OnInit, OnDestroy {
     if (!row || !text) { return; }
     if (this.modalMode === 'loot') {
       this.bossApi.addLoot(row.id, text).subscribe({
-        next: (updated) => { row.loots = updated.loots; if (this.details && this.details.id === row.id) this.details.loots = updated.loots; this.closeModal(); if (this.details) { this.detailsOpen = true; } },
+        next: (updated) => { 
+          row.loots = updated.loots; 
+          row.lootItems = updated.lootItems;
+          if (this.details && this.details.id === row.id) {
+            this.details.loots = updated.loots;
+            this.details.lootItems = updated.lootItems;
+          }
+          this.closeModal(); 
+          if (this.details) { this.detailsOpen = true; } 
+        },
         error: (e) => console.error('Failed to add loot', e)
       });
     } else {
@@ -179,7 +229,11 @@ export class HistoryComponent implements OnInit, OnDestroy {
       try {
         const updated = await firstValueFrom(this.bossApi.addLoot(row.id, item));
         row.loots = updated.loots;
-        if (this.details && this.details.id === row.id) this.details.loots = updated.loots;
+        row.lootItems = updated.lootItems;
+        if (this.details && this.details.id === row.id) {
+          this.details.loots = updated.loots;
+          this.details.lootItems = updated.lootItems;
+        }
         lastUpdated = updated;
         this.ocrAddedCount++;
       } catch (e) {
@@ -212,14 +266,22 @@ export class HistoryComponent implements OnInit, OnDestroy {
     }
   }
 
+
+
   removeLoot(row: BossDefeatDto, index: number): void {
     this.bossApi.removeLoot(row.id, index).subscribe({
       next: (updated) => {
         // Update details view
-        if (this.details && this.details.id === row.id) this.details.loots = updated.loots;
+        if (this.details && this.details.id === row.id) {
+          this.details.loots = updated.loots;
+          this.details.lootItems = updated.lootItems;
+        }
         // Update list row
         const listRow = this.rows.find(r => r.id === row.id);
-        if (listRow) listRow.loots = updated.loots;
+        if (listRow) {
+          listRow.loots = updated.loots;
+          listRow.lootItems = updated.lootItems;
+        }
       },
       error: (e) => console.error('Failed to remove loot', e)
     });
@@ -233,6 +295,23 @@ export class HistoryComponent implements OnInit, OnDestroy {
         if (listRow) listRow.attendees = updated.attendees;
       },
       error: (e) => console.error('Failed to remove attendee', e)
+    });
+  }
+
+  updateLootPrice(row: BossDefeatDto, index: number, price: number | null): void {
+    this.bossApi.updateLootPrice(row.id, index, price).subscribe({
+      next: (updated) => {
+        if (this.details && this.details.id === row.id) {
+          this.details.lootItems = updated.lootItems;
+          this.details.loots = updated.loots;
+        }
+        const listRow = this.rows.find(r => r.id === row.id);
+        if (listRow) {
+          listRow.lootItems = updated.lootItems;
+          listRow.loots = updated.loots;
+        }
+      },
+      error: (e) => console.error('Failed to update loot price', e)
     });
   }
 
@@ -250,6 +329,37 @@ export class HistoryComponent implements OnInit, OnDestroy {
         error: (e) => console.error('Failed to delete history record', e)
       });
     }
+  }
+
+  getTotalLootValue(details: BossDefeatDto): number {
+    if (!details.lootItems || details.lootItems.length === 0) {
+      return 0;
+    }
+    return details.lootItems.reduce((total, item) => {
+      return total + (item.price || 0);
+    }, 0);
+  }
+
+  onPriceChange(event: Event, details: BossDefeatDto, index: number): void {
+    const target = event.target as HTMLInputElement;
+    const value = target.value;
+    const price = value ? Number(value) : null;
+    this.updateLootPrice(details, index, price);
+  }
+
+  loadMembers(): void {
+    this.loading = true;
+    
+    this.bossApi.getMembers().subscribe({
+      next: (members) => {
+        this.members = members;
+        this.loading = false;
+      },
+      error: (e) => {
+        console.error('Failed to load members', e);
+        this.loading = false;
+      }
+    });
   }
 }
 

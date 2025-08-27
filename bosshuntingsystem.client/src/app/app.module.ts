@@ -9,13 +9,15 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HistoryComponent } from './history/history.component';
 import { NotificationsComponent } from './notifications/notifications.component';
+import { MembersComponent } from './members/members.component';
 import { CacheInterceptor } from './cache-interceptor';
 
 @NgModule({
   declarations: [
     AppComponent,
     HistoryComponent,
-    NotificationsComponent
+    NotificationsComponent,
+    MembersComponent
   ],
   imports: [
     BrowserModule, CommonModule, HttpClientModule, FormsModule,

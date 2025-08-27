@@ -19,13 +19,49 @@ export interface BossCreateUpdateDto {
   lastKilledAt: string | null;
 }
 
+export interface LootItemDto {
+  name: string;
+  price: number | null;
+}
+
 export interface BossDefeatDto {
   id: number;
   bossId: number;
   bossName: string;
+  combatPower: string[];
   defeatedAtUtc: string | null; // ISO date string from server, null for history entries
   loots: string[];
   attendees: string[];
+  lootItems?: LootItemDto[]; // New property for loot with prices
+}
+
+export interface MemberDto {
+  id: number;
+  name: string;
+  combatPower: number;
+  gcashNumber?: string;
+  gcashName?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface CreateUpdateMemberDto {
+  name: string;
+  combatPower: number;
+  gcashNumber?: string;
+  gcashName?: string;
+}
+
+export interface SyncResultDto {
+  totalAttendees: number;
+  newMembersAdded: number;
+  totalMembers: number;
+}
+
+export interface IpRestrictionInfo {
+  clientIp: string;
+  isRestricted: boolean;
+  restrictedEndpoints: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -41,10 +77,13 @@ export class BossService {
   }
 
   private url(path: string): string { 
+    // Support absolute URLs (http/https) and relative API paths
+    const isAbsolute = /^https?:\/\//i.test(path);
+    const basePlusPath = isAbsolute ? path : `${this.apiBase}${path}`;
     // Add cache-busting parameter to prevent caching
     const timestamp = new Date().getTime();
-    const separator = path.includes('?') ? '&' : '?';
-    return `${this.apiBase}${path}${separator}_t=${timestamp}`; 
+    const separator = basePlusPath.includes('?') ? '&' : '?';
+    return `${basePlusPath}${separator}_t=${timestamp}`; 
   }
 
   list(): Observable<BossDto[]> { return this.http.get<BossDto[]>(('https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/bosses')); }
@@ -72,6 +111,34 @@ export class BossService {
   }
   removeAttendee(historyId: number, index: number): Observable<BossDefeatDto> {
     return this.http.delete<BossDefeatDto>((`https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/bosses/history/${historyId}/attendee/${index}`));
+  }
+  updateLootPrice(historyId: number, index: number, price: number | null): Observable<BossDefeatDto> {
+    return this.http.put<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/loot/${index}/price`), { index, price });
+  }
+
+  // Member methods
+  getMembers(): Observable<MemberDto[]> {
+    return this.http.get<MemberDto[]>(this.url('https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/members'));
+  }
+
+  getMember(id: number): Observable<MemberDto> {
+    return this.http.get<MemberDto>(this.url(`https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/members/${id}`));
+  }
+
+  createMember(member: CreateUpdateMemberDto): Observable<MemberDto> {
+    return this.http.post<MemberDto>(this.url('https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/members'), member);
+  }
+
+  updateMember(id: number, member: CreateUpdateMemberDto): Observable<MemberDto> {
+    return this.http.put<MemberDto>(this.url(`https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/members/${id}`), member);
+  }
+
+  deleteMember(id: number): Observable<void> {
+    return this.http.delete<void>(this.url(`https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/members/${id}`));
+  }
+
+  syncMembersFromAttendance(): Observable<SyncResultDto> {
+    return this.http.post<SyncResultDto>(this.url('https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/members/sync-from-attendance'), {});
   }
   deleteHistory(historyId: number): Observable<void> {
     return this.http
@@ -102,6 +169,11 @@ export class BossService {
 
   sendManualNotification(message: string): Observable<any> {
     return this.http.post(('https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/bosses/notify'), { message });
+  }
+
+  // IP restriction check
+  checkIpRestrictions(): Observable<IpRestrictionInfo> {
+    return this.http.get<IpRestrictionInfo>(this.url('https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/api/bosses/debug/ip'));
   }
 }
 

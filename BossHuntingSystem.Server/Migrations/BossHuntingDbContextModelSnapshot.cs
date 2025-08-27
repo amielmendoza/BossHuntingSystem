@@ -78,6 +78,10 @@ namespace BossHuntingSystem.Server.Migrations
                     b.Property<DateTime?>("DefeatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("LootItemsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("LootsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -87,6 +91,44 @@ namespace BossHuntingSystem.Server.Migrations
                     b.HasIndex("BossId");
 
                     b.ToTable("BossDefeats");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.Member", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CombatPower")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GcashName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GcashNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Members");
                 });
 
             modelBuilder.Entity("BossHuntingSystem.Server.Data.BossDefeat", b =>

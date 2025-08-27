@@ -10,6 +10,7 @@ namespace BossHuntingSystem.Server.Data
         
         public DbSet<Boss> Bosses { get; set; }
         public DbSet<BossDefeat> BossDefeats { get; set; }
+        public DbSet<Member> Members { get; set; }
         
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -39,6 +40,21 @@ namespace BossHuntingSystem.Server.Data
                 entity.Property(e => e.DefeatedAtUtc).IsRequired(false); // Nullable
                 entity.Property(e => e.LootsJson).HasColumnType("nvarchar(max)");
                 entity.Property(e => e.AttendeesJson).HasColumnType("nvarchar(max)");
+            });
+            
+            // Configure Member entity
+            modelBuilder.Entity<Member>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.CombatPower).IsRequired();
+                entity.Property(e => e.GcashNumber).HasMaxLength(20);
+                entity.Property(e => e.GcashName).HasMaxLength(100);
+                entity.Property(e => e.CreatedAtUtc).IsRequired();
+                entity.Property(e => e.UpdatedAtUtc).IsRequired();
+                
+                // Create unique index on Name to prevent duplicates
+                entity.HasIndex(e => e.Name).IsUnique();
             });
             
             // Seed some initial data (optional)
