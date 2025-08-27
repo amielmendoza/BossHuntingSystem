@@ -11,13 +11,15 @@ import { HistoryComponent } from './history/history.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MembersComponent } from './members/members.component';
 import { CacheInterceptor } from './cache-interceptor';
+import { JaeComponent } from './jae/jae.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     HistoryComponent,
     NotificationsComponent,
-    MembersComponent
+    MembersComponent,
+    JaeComponent
   ],
   imports: [
     BrowserModule, CommonModule, HttpClientModule, FormsModule,
