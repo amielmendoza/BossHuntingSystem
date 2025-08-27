@@ -61,6 +61,8 @@ export interface IpRestrictionInfo {
   clientIp: string;
   isRestricted: boolean;
   restrictedEndpoints: string[];
+  allowedIps: string[];
+  ipRestrictionsEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BossHuntingSystem.Server.Data;
 using BossHuntingSystem.Server.Services;
+using BossHuntingSystem.Server.Models;
+using Microsoft.Extensions.Options;
 
 namespace BossHuntingSystem.Server.Controllers
 {
@@ -622,14 +624,35 @@ namespace BossHuntingSystem.Server.Controllers
             var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
             var connectionIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 
+            // Get IP restriction configuration
+            var ipRestrictionsConfig = HttpContext.RequestServices.GetService<IOptions<IpRestrictionsConfig>>()?.Value;
+            var isRestricted = false;
+            var restrictedEndpoints = new List<string>();
+
+            if (ipRestrictionsConfig != null && ipRestrictionsConfig.Enabled)
+            {
+                // Check if any restricted endpoints exist
+                restrictedEndpoints = ipRestrictionsConfig.RestrictedEndpoints;
+                
+                // Check if client IP is in allowed list
+                var isAllowed = ipRestrictionsConfig.AllowedIps.Any(allowedIp => 
+                    IsIpMatch(clientIp, allowedIp));
+                
+                // If there are restricted endpoints and IP is not allowed, then it's restricted
+                isRestricted = restrictedEndpoints.Any() && !isAllowed;
+            }
+
             return Ok(new
             {
-                ClientIp = clientIp,
+                clientIp = clientIp,
+                isRestricted = isRestricted,
+                restrictedEndpoints = restrictedEndpoints,
+                allowedIps = ipRestrictionsConfig?.AllowedIps ?? new List<string>(),
+                ipRestrictionsEnabled = ipRestrictionsConfig?.Enabled ?? false,
                 ForwardedFor = forwardedFor,
                 RealIp = realIp,
                 ConnectionIp = connectionIp,
-                UserAgent = Request.Headers["User-Agent"].FirstOrDefault(),
-                AllHeaders = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())
+                UserAgent = Request.Headers["User-Agent"].FirstOrDefault()
             });
         }
 
@@ -651,6 +674,24 @@ namespace BossHuntingSystem.Server.Controllers
 
             // Fallback to connection remote IP
             return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+
+        private bool IsIpMatch(string clientIp, string allowedIp)
+        {
+            // Handle IPv6 loopback
+            if (allowedIp == "::1" && clientIp == "::1")
+                return true;
+
+            // Handle IPv4 loopback
+            if (allowedIp == "127.0.0.1" && clientIp == "127.0.0.1")
+                return true;
+
+            // Handle localhost
+            if (allowedIp == "127.0.0.1" && clientIp == "::1")
+                return true;
+
+            // Exact match
+            return clientIp.Equals(allowedIp, StringComparison.OrdinalIgnoreCase);
         }
     }
 

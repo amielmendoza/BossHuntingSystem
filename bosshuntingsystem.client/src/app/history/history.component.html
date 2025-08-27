@@ -28,7 +28,7 @@
         <tr *ngFor="let r of rows">
           <td class="it-title">{{ r.bossName }}</td>
 
-          <td class="text-secondary">{{ r.defeatedAtUtc ? (r.defeatedAtUtc | date:'short') : 'History Entry' }}</td>
+          <td class="text-secondary">{{ r.defeatedAtUtc ? dateUtils.formatUtcForDisplay(r.defeatedAtUtc) : 'History Entry' }}</td>
           <td>
             <span class="truncate" [title]="(r.loots || []).join(', ')">
               <ng-container *ngFor="let l of r.loots; let last = last">{{ l }}<span *ngIf="!last">, </span></ng-container>
@@ -44,20 +44,20 @@
               <button class="btn btn-sm btn-outline-primary" (click)="openDetails(r)">View Details</button>
               <button class="btn btn-sm btn-outline-primary" 
                       (click)="openModal(r, 'loot')" 
-                      [disabled]="isIpRestricted"
-                      [title]="isIpRestricted ? 'IP restricted - Add Loot not allowed' : 'Add Loot'">
+                      *ngIf="!isIpRestricted"
+                      title="Add Loot">
                 Add Loot
               </button>
               <button class="btn btn-sm btn-outline-secondary" 
                       (click)="openModal(r, 'attendee')" 
-                      [disabled]="isIpRestricted"
-                      [title]="isIpRestricted ? 'IP restricted - Add Attendance not allowed' : 'Add Attendance'">
+                      *ngIf="!isIpRestricted"
+                      title="Add Attendance">
                 Add Attendance
               </button>
               <button class="btn btn-sm btn-outline-danger" 
                       (click)="deleteHistory(r)" 
-                      [disabled]="isIpRestricted"
-                      [title]="isIpRestricted ? 'IP restricted - Delete not allowed' : 'Delete'">
+                      *ngIf="!isIpRestricted"
+                      title="Delete">
                 Delete
               </button>
             </div>
@@ -79,7 +79,7 @@
           <div class="modal-body" *ngIf="details">
             <div class="mb-2"><strong>Boss:</strong> {{ details.bossName }}</div>
 
-            <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc ? (details.defeatedAtUtc | date:'short') : 'History Entry (Not Actually Defeated)' }}</div>
+            <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc ? dateUtils.formatUtcForDisplay(details.defeatedAtUtc) : 'History Entry (Not Actually Defeated)' }}</div>
             <hr>
             <div class="mb-3">
               <div class="d-flex justify-content-between align-items-center mb-2">
@@ -122,8 +122,8 @@
                       <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                 (click)="removeLoot(details, i)" 
-                                [disabled]="isIpRestricted"
-                                [title]="isIpRestricted ? 'IP restricted - Remove not allowed' : 'Remove loot'"
+                                *ngIf="!isIpRestricted"
+                                title="Remove loot"
                                 aria-label="Remove loot">
                           <i class="bi bi-trash"></i>
                         </button>
@@ -158,8 +158,8 @@
                       <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                 (click)="removeAttendee(details, i)" 
-                                [disabled]="isIpRestricted"
-                                [title]="isIpRestricted ? 'IP restricted - Remove not allowed' : 'Remove attendee'"
+                                *ngIf="!isIpRestricted"
+                                title="Remove attendee"
                                 aria-label="Remove attendee">
                           <i class="bi bi-trash"></i>
                         </button>
@@ -177,20 +177,20 @@
             <button class="btn btn-secondary" (click)="closeDetails()">Close</button>
             <button class="btn btn-outline-primary" 
                     (click)="openModal(details!, 'loot')" 
-                    [disabled]="isIpRestricted"
-                    [title]="isIpRestricted ? 'IP restricted - Add Loot not allowed' : 'Add Loot'">
+                    *ngIf="!isIpRestricted"
+                    title="Add Loot">
               Add Loot
             </button>
             <button class="btn btn-outline-secondary me-2" 
                     (click)="openModal(details!, 'attendee')" 
-                    [disabled]="isIpRestricted"
-                    [title]="isIpRestricted ? 'IP restricted - Add Attendance not allowed' : 'Add Attendance'">
+                    *ngIf="!isIpRestricted"
+                    title="Add Attendance">
               Add Attendance
             </button>
             <button class="btn btn-outline-danger" 
                     (click)="deleteHistory(details!)" 
-                    [disabled]="isIpRestricted"
-                    [title]="isIpRestricted ? 'IP restricted - Delete not allowed' : 'Delete Record'">
+                    *ngIf="!isIpRestricted"
+                    title="Delete Record">
               Delete Record
             </button>
           </div>

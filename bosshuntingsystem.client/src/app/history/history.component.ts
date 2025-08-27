@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { BossDefeatDto, BossService, IpRestrictionInfo } from '../boss.service';
 import { Subscription, firstValueFrom } from 'rxjs';
 import Tesseract from 'tesseract.js';
+import { DateUtilsService } from '../utils/date-utils.service';
 
 @Component({
   selector: 'app-history',
@@ -11,6 +12,7 @@ import Tesseract from 'tesseract.js';
 export class HistoryComponent implements OnInit, OnDestroy {
   rows: BossDefeatDto[] = [];
   loading = true;
+  public dateUtils: DateUtilsService;
   private sub?: Subscription;
   // Modal state
   modalOpen = false;
@@ -27,7 +29,9 @@ export class HistoryComponent implements OnInit, OnDestroy {
   ipRestrictionInfo: IpRestrictionInfo | null = null;
   isIpRestricted = false;
 
-  constructor(private bossApi: BossService) {}
+  constructor(private bossApi: BossService, private _dateUtils: DateUtilsService) {
+    this.dateUtils = _dateUtils;
+  }
 
   ngOnInit(): void {
     // Check IP restrictions first
@@ -52,6 +56,10 @@ export class HistoryComponent implements OnInit, OnDestroy {
         // Check if any restricted endpoints are being accessed
         this.isIpRestricted = info.isRestricted;
         console.log('[History] IP restriction check:', info);
+        console.log('[History] Client IP:', info.clientIp);
+        console.log('[History] Is Restricted:', info.isRestricted);
+        console.log('[History] Allowed IPs:', info.allowedIps);
+        console.log('[History] IP Restrictions Enabled:', info.ipRestrictionsEnabled);
       },
       error: (e) => {
         console.error('Failed to check IP restrictions', e);

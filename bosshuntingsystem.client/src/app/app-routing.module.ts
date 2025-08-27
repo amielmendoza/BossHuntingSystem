@@ -3,11 +3,15 @@ import { RouterModule, Routes } from '@angular/router';
 import { HistoryComponent } from './history/history.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MembersComponent } from './members/members.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
 
 const routes: Routes = [
+  { path: '', redirectTo: '/dashboard', pathMatch: 'full' }, // Redirect root to dashboard
+  { path: 'dashboard', component: DashboardComponent }, // Dashboard route with component
   { path: 'history', component: HistoryComponent },
   { path: 'notifications', component: NotificationsComponent },
-  { path: 'members', component: MembersComponent }
+  { path: 'members', component: MembersComponent },
+  { path: '**', redirectTo: '/dashboard' }
 ];
 
 @NgModule({

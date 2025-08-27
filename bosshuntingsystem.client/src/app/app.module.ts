@@ -8,6 +8,7 @@ import { AppComponent } from './app.component';
 import { HistoryComponent } from './history/history.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MembersComponent } from './members/members.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
 import { CacheInterceptor } from './cache-interceptor';
 
 @NgModule({
@@ -15,7 +16,8 @@ import { CacheInterceptor } from './cache-interceptor';
     AppComponent,
     HistoryComponent,
     NotificationsComponent,
-    MembersComponent
+    MembersComponent,
+    DashboardComponent
   ],
   imports: [
     BrowserModule, HttpClientModule, FormsModule,
