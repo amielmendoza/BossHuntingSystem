@@ -70,7 +70,7 @@
   <!-- Modal -->
   <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" [style.display]="(modalOpen || detailsOpen) ? 'block' : 'none'" style="background: rgba(0,0,0,.4);">
     <div class="modal-dialog">
-      <div class="modal-content">
+      <div class="modal-content vh-75 overflow-auto">
         <ng-container *ngIf="detailsOpen; else addForm">
           <div class="modal-header">
             <h5 class="modal-title">History Details</h5>
