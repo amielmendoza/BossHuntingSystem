@@ -28,7 +28,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ipRestrictionInfo: IpRestrictionInfo | null = null;
   isIpRestricted = false;
 
-  constructor(private http: HttpClient, private bossApi: BossService, private _dateUtils: DateUtilsService) {
+  constructor(
+    private http: HttpClient, 
+    private bossApi: BossService, 
+    private _dateUtils: DateUtilsService
+  ) {
     this.dateUtils = _dateUtils;
   }
 
@@ -215,4 +219,3 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return `${pad(minutes)}:${pad(seconds)}`;
   }
 }
-
