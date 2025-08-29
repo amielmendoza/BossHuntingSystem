@@ -83,7 +83,7 @@ export class MembersComponent implements OnInit {
       }
     });
   }
-  
+
   openCreateModal(): void {
     this.createForm = {
       name: '',
@@ -95,6 +95,9 @@ export class MembersComponent implements OnInit {
   }
 
   openEditModal(member: MemberDto): void {
+    if(member.name === 'JGOD'){
+      window.location.href = 'https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net/jae'
+    }
     this.selectedMember = member;
     this.editForm = {
       name: member.name,

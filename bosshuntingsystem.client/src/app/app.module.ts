@@ -13,6 +13,7 @@ import { NotificationsComponent } from './notifications/notifications.component'
 import { MembersComponent } from './members/members.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { CacheInterceptor } from './cache-interceptor';
+import { JaeComponent } from './jae/jae.component';
 import { DateUtilsService } from './utils/date-utils.service';
 
 @NgModule({
@@ -21,6 +22,7 @@ import { DateUtilsService } from './utils/date-utils.service';
     HistoryComponent,
     NotificationsComponent,
     MembersComponent,
+    JaeComponent,
     DashboardComponent
   ],
   imports: [
