@@ -106,20 +106,14 @@ namespace BossHuntingSystem.Server.Middleware
 
         private bool IsIpMatch(string clientIp, string allowedIp)
         {
-            // Handle IPv6 loopback
-            if (allowedIp == "::1" && clientIp == "::1")
-                return true;
+            // Extract IP part from client IP (remove port if present)
+            var clientIpPart = clientIp.Split(':')[0];
+            
+            // Extract IP part from allowed IP (remove port if present)
+            var allowedIpPart = allowedIp.Split(':')[0];
 
-            // Handle IPv4 loopback
-            if (allowedIp == "127.0.0.1" && clientIp == "127.0.0.1")
-                return true;
-
-            // Handle localhost
-            if (allowedIp == "127.0.0.1" && clientIp == "::1")
-                return true;
-
-            // Exact match
-            return clientIp.Equals(allowedIp, StringComparison.OrdinalIgnoreCase);
+            // Exact match on IP parts
+            return clientIpPart.Equals(allowedIpPart, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

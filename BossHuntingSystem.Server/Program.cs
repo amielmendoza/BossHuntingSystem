@@ -28,21 +28,15 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // Production: Allow your Azure Web App domain (temporarily more permissive for debugging)
+            // Production: Allow your Windows Server domain
             policy.WithOrigins(
-                    "https://bosshuntingsystem.azurewebsites.net",
-                    "https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net",
-                    "https://bosshuntingsystem-bbeeekgbb0atcngn.scm.southeastasia-01.azurewebsites.net")
+                    "https://your-server-domain.com",
+                    "http://your-server-domain.com",
+                    "https://localhost",
+                    "http://localhost")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
-            
-            // Temporary: Add wildcard for Azure subdomains to help debug
-            policy.SetIsOriginAllowed(origin => 
-                origin.Contains("azurewebsites.net") || 
-                origin.Contains("bosshuntingsystem"))
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
         }
     });
 });

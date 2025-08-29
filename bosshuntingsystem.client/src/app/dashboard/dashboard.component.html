@@ -55,7 +55,11 @@
               <button class="btn btn-sm btn-success me-1" [disabled]="!isAvailable(b)" (click)="defeat(b)">Defeat</button>
               <button class="btn btn-sm btn-info me-1" (click)="addHistory(b)">History</button>
               <button class="btn btn-sm btn-outline-secondary me-1" (click)="startEdit(b)">Edit</button>
-              <button class="btn btn-sm btn-outline-danger" (click)="deleteBoss(b.id)">Delete</button>
+              <button class="btn btn-sm btn-outline-danger" 
+                      (click)="deleteBoss(b.id)" 
+                      title="Delete Boss">
+                Delete
+              </button>
             </td>
           </tr>
         </tbody>

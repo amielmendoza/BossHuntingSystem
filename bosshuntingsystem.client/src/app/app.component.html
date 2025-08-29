@@ -1,20 +1,50 @@
-﻿<div class="layout">
+﻿<div class="d-flex p-2 gap-2 w-full vh-100">
+  <!-- Loading overlay -->
+  <div *ngIf="isLoadingIpCheck" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 9999;">
+    <div class="spinner-border text-light" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
   <!-- Left Sidebar (kept minimal) -->
-  <aside class="sidebar d-none d-md-block">
+  <aside class="sidebar d-none d-md-block w-10 h-100" [ngClass]="{'w-auto': menu.isOpen}">
     <div class="brand">
-      <span class="brand-mark"></span>
-      <span>Boss Hunting</span>
+      <button class="btn" (click)="openMenu()">
+        <i class="bi bi-list"></i>
+      </button>
+      <span [ngClass]="{'d-none': menu.isOpen}">PARAK</span>
     </div>
     <div class="nav-group">
-      <a class="item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><i class="bi bi-grid-1x2"></i> <span>Dashboard</span></a>
-      <a class="item" routerLink="/history" routerLinkActive="active"><i class="bi bi-clock-history"></i> <span>History</span></a>
-      <a class="item" routerLink="/members" routerLinkActive="active"><i class="bi bi-people"></i> <span>Members</span></a>
-      <a class="item" routerLink="/notifications" routerLinkActive="active"><i class="bi bi-bell"></i> <span>Notifications</span></a>
+      <a class="item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <i class="bi bi-grid-1x2"></i> 
+        <span [ngClass]="{'d-none': menu.isOpen}">Dashboard</span>
+      </a>
+      <a class="item" routerLink="/history" routerLinkActive="active">
+        <i class="bi bi-clock-history"></i> 
+        <span [ngClass]="{'d-none': menu.isOpen}">History</span>
+      </a>
+      <a class="item" routerLink="/members" routerLinkActive="active">
+        <i class="bi bi-people"></i>
+        <span [ngClass]="{'d-none': menu.isOpen}">Members</span>
+      </a>
+      <a class="item" routerLink="/notifications" routerLinkActive="active">
+        <i class="bi bi-bell"></i> 
+        <span [ngClass]="{'d-none': menu.isOpen}">Notifications</span>
+      </a>
     </div>
+    
+
   </aside>
 
   <!-- Main Content -->
-  <section class="content">
+  <section class="w-100 h-100 overflow-auto">
+    <div class="topbar w-100">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="mb-0">{{name.route}}</h5>
+
+      </div>
+    </div>
+
     <!-- Route outlet for all pages -->
     <router-outlet></router-outlet>
   </section>

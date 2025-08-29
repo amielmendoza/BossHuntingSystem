@@ -1,11 +1,5 @@
 <div class="cardx span-12">
-  <!-- IP Restriction Warning -->
-  <div class="alert alert-warning alert-dismissible fade show mb-3" *ngIf="isIpRestricted" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    <strong>IP Restriction Active:</strong> Your IP address ({{ ipRestrictionInfo?.clientIp }}) is not authorized to perform restricted operations. 
-    Add Loot, Add Attendance, and Delete functions are disabled.
-    <button type="button" class="btn-close" (click)="isIpRestricted = false"></button>
-  </div>
+
   
   <div class="d-flex justify-content-between align-items-center mb-2">
     <div class="fw-semibold">Defeat History</div>
@@ -44,19 +38,16 @@
               <button class="btn btn-sm btn-outline-primary" (click)="openDetails(r)">View Details</button>
               <button class="btn btn-sm btn-outline-primary" 
                       (click)="openModal(r, 'loot')" 
-                      *ngIf="!isIpRestricted"
                       title="Add Loot">
                 Add Loot
               </button>
               <button class="btn btn-sm btn-outline-secondary" 
                       (click)="openModal(r, 'attendee')" 
-                      *ngIf="!isIpRestricted"
                       title="Add Attendance">
                 Add Attendance
               </button>
               <button class="btn btn-sm btn-outline-danger" 
                       (click)="deleteHistory(r)" 
-                      *ngIf="!isIpRestricted"
                       title="Delete">
                 Delete
               </button>
@@ -68,7 +59,7 @@
   </div>
 
   <!-- Modal -->
-  <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" style="display: {{ (modalOpen || detailsOpen) ? 'block' : 'none' }}; background: rgba(0,0,0,.4);">
+  <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" [style.display]="(modalOpen || detailsOpen) ? 'block' : 'none'" style="background: rgba(0,0,0,.4);">
     <div class="modal-dialog">
       <div class="modal-content">
         <ng-container *ngIf="detailsOpen; else addForm">
@@ -122,7 +113,6 @@
                       <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                 (click)="removeLoot(details, i)" 
-                                *ngIf="!isIpRestricted"
                                 title="Remove loot"
                                 aria-label="Remove loot">
                           <i class="bi bi-trash"></i>
@@ -144,21 +134,20 @@
               </div>
               <div class="table-responsive" *ngIf="details.attendees && details.attendees.length > 0">
                 <table class="table table-sm table-striped">
-                  <thead class="table-light">
-                    <tr>
-                      <th>#</th>
-                      <th>Player Name</th>
-                      <th class="text-end">Actions</th>
-                    </tr>
-                  </thead>
+                                     <thead class="table-light">
+                     <tr>
+                       <th>#</th>
+                       <th>Player Name</th>
+                       <th class="text-end">Actions</th>
+                     </tr>
+                   </thead>
                   <tbody>
-                    <tr *ngFor="let attendee of details.attendees; let i = index">
-                      <td class="text-muted">{{ i + 1 }}</td>
-                      <td>{{ attendee }}</td>
-                      <td class="text-end">
+                                         <tr *ngFor="let attendee of details.attendees; let i = index">
+                       <td class="text-muted">{{ i + 1 }}</td>
+                       <td>{{ attendee }}</td>
+                       <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                 (click)="removeAttendee(details, i)" 
-                                *ngIf="!isIpRestricted"
                                 title="Remove attendee"
                                 aria-label="Remove attendee">
                           <i class="bi bi-trash"></i>
@@ -177,19 +166,16 @@
             <button class="btn btn-secondary" (click)="closeDetails()">Close</button>
             <button class="btn btn-outline-primary" 
                     (click)="openModal(details!, 'loot')" 
-                    *ngIf="!isIpRestricted"
                     title="Add Loot">
               Add Loot
             </button>
             <button class="btn btn-outline-secondary me-2" 
                     (click)="openModal(details!, 'attendee')" 
-                    *ngIf="!isIpRestricted"
                     title="Add Attendance">
               Add Attendance
             </button>
             <button class="btn btn-outline-danger" 
                     (click)="deleteHistory(details!)" 
-                    *ngIf="!isIpRestricted"
                     title="Delete Record">
               Delete Record
             </button>

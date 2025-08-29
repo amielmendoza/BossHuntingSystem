@@ -28,6 +28,7 @@ export interface BossDefeatDto {
   id: number;
   bossId: number;
   bossName: string;
+  combatPower: string[];
   defeatedAtUtc: string | null; // ISO date string from server, null for history entries
   loots: string[];
   attendees: string[];
@@ -51,11 +52,7 @@ export interface CreateUpdateMemberDto {
   gcashName?: string;
 }
 
-export interface SyncResultDto {
-  totalAttendees: number;
-  newMembersAdded: number;
-  totalMembers: number;
-}
+
 
 export interface IpRestrictionInfo {
   clientIp: string;
@@ -78,10 +75,13 @@ export class BossService {
   }
 
   private url(path: string): string { 
+    // Support absolute URLs (http/https) and relative API paths
+    const isAbsolute = /^https?:\/\//i.test(path);
+    const basePlusPath = isAbsolute ? path : `${this.apiBase}${path}`;
     // Add cache-busting parameter to prevent caching
     const timestamp = new Date().getTime();
-    const separator = path.includes('?') ? '&' : '?';
-    return `${this.apiBase}${path}${separator}_t=${timestamp}`; 
+    const separator = basePlusPath.includes('?') ? '&' : '?';
+    return `${basePlusPath}${separator}_t=${timestamp}`; 
   }
 
   list(): Observable<BossDto[]> { return this.http.get<BossDto[]>(this.url('/api/bosses')); }
@@ -135,9 +135,7 @@ export class BossService {
     return this.http.delete<void>(this.url(`/api/members/${id}`));
   }
 
-  syncMembersFromAttendance(): Observable<SyncResultDto> {
-    return this.http.post<SyncResultDto>(this.url('/api/members/sync-from-attendance'), {});
-  }
+
   deleteHistory(historyId: number): Observable<void> {
     return this.http
       .delete(this.url(`/api/bosses/history/${historyId}`), { responseType: 'text' as 'json' })
@@ -154,6 +152,7 @@ export class BossService {
     form.append('mode', mode);
     return this.http.post<{ loots: string[]; attendees: string[] }>(this.url('/api/vision/extract'), form);
   }
+  
   // Use text responseType to avoid JSON parse on 204 No Content
   delete(id: number): Observable<void> {
     console.log('[BossService] DELETE request to:', this.url(`/api/bosses/${id}`));

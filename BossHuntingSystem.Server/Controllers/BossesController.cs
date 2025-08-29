@@ -434,23 +434,6 @@ namespace BossHuntingSystem.Server.Controllers
                 attendees.Add(attendeeName);
                 record.Attendees = attendees;
 
-                // Check if member already exists, if not, add them to members table
-                var existingMember = await _context.Members.FirstOrDefaultAsync(m => m.Name.ToLower() == attendeeName.ToLower());
-                if (existingMember == null)
-                {
-                    var newMember = new Data.Member
-                    {
-                        Name = attendeeName,
-                        CombatPower = 0, // Default combat power
-                        GcashNumber = null,
-                        GcashName = null,
-                        CreatedAtUtc = DateTime.UtcNow,
-                        UpdatedAtUtc = DateTime.UtcNow
-                    };
-                    _context.Members.Add(newMember);
-                    Console.WriteLine($"[AddAttendee] Auto-created new member: {attendeeName}");
-                }
-
                 await _context.SaveChangesAsync();
                 
                 // Add cache control headers to prevent caching
@@ -629,6 +612,11 @@ namespace BossHuntingSystem.Server.Controllers
             var isRestricted = false;
             var restrictedEndpoints = new List<string>();
 
+            Console.WriteLine($"[Debug] Client IP: {clientIp}");
+            Console.WriteLine($"[Debug] IP Restrictions Enabled: {ipRestrictionsConfig?.Enabled}");
+            Console.WriteLine($"[Debug] Allowed IPs: {string.Join(", ", ipRestrictionsConfig?.AllowedIps ?? new List<string>())}");
+            Console.WriteLine($"[Debug] Restricted Endpoints: {string.Join(", ", ipRestrictionsConfig?.RestrictedEndpoints ?? new List<string>())}");
+
             if (ipRestrictionsConfig != null && ipRestrictionsConfig.Enabled)
             {
                 // Check if any restricted endpoints exist
@@ -638,8 +626,13 @@ namespace BossHuntingSystem.Server.Controllers
                 var isAllowed = ipRestrictionsConfig.AllowedIps.Any(allowedIp => 
                     IsIpMatch(clientIp, allowedIp));
                 
+                Console.WriteLine($"[Debug] Is Allowed: {isAllowed}");
+                Console.WriteLine($"[Debug] Has Restricted Endpoints: {restrictedEndpoints.Any()}");
+                
                 // If there are restricted endpoints and IP is not allowed, then it's restricted
                 isRestricted = restrictedEndpoints.Any() && !isAllowed;
+                
+                Console.WriteLine($"[Debug] Final isRestricted: {isRestricted}");
             }
 
             return Ok(new
@@ -678,20 +671,20 @@ namespace BossHuntingSystem.Server.Controllers
 
         private bool IsIpMatch(string clientIp, string allowedIp)
         {
-            // Handle IPv6 loopback
-            if (allowedIp == "::1" && clientIp == "::1")
-                return true;
+            Console.WriteLine($"[IsIpMatch] Comparing clientIp: '{clientIp}' with allowedIp: '{allowedIp}'");
 
-            // Handle IPv4 loopback
-            if (allowedIp == "127.0.0.1" && clientIp == "127.0.0.1")
-                return true;
+            // Extract IP part from client IP (remove port if present)
+            var clientIpPart = clientIp.Split(':')[0];
+            
+            // Extract IP part from allowed IP (remove port if present)
+            var allowedIpPart = allowedIp.Split(':')[0];
 
-            // Handle localhost
-            if (allowedIp == "127.0.0.1" && clientIp == "::1")
-                return true;
+            Console.WriteLine($"[IsIpMatch] After port removal - clientIpPart: '{clientIpPart}', allowedIpPart: '{allowedIpPart}'");
 
-            // Exact match
-            return clientIp.Equals(allowedIp, StringComparison.OrdinalIgnoreCase);
+            // Exact match on IP parts
+            var result = clientIpPart.Equals(allowedIpPart, StringComparison.OrdinalIgnoreCase);
+            Console.WriteLine($"[IsIpMatch] Result: {result}");
+            return result;
         }
     }
 

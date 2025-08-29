@@ -1,12 +1,11 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
+
+
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-people-fill"></i> Members</h2>
         <div class="d-flex gap-2">
-          <button type="button" class="btn btn-outline-primary" (click)="openSyncModal()">
-            <i class="bi bi-arrow-repeat"></i> Sync from Attendance
-          </button>
           <button type="button" class="btn btn-primary" (click)="openCreateModal()">
             <i class="bi bi-plus-circle"></i> Add Member
           </button>
@@ -81,7 +80,10 @@
                       <button type="button" class="btn btn-outline-primary" (click)="openEditModal(member)" title="Edit">
                         <i class="bi bi-pencil"></i>
                       </button>
-                      <button type="button" class="btn btn-outline-danger" (click)="openDeleteModal(member)" title="Delete">
+                      <button type="button" 
+                              class="btn btn-outline-danger" 
+                              (click)="openDeleteModal(member)" 
+                              title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
                     </div>
@@ -194,40 +196,7 @@
   </div>
 </div>
 
-<!-- Sync Modal -->
-<div class="modal fade" [class.show]="showSyncModal" [style.display]="showSyncModal ? 'block' : 'none'" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-arrow-repeat"></i> Sync from Attendance</h5>
-        <button type="button" class="btn-close" (click)="closeModals()"></button>
-      </div>
-      <div class="modal-body">
-        <div *ngIf="!syncResult">
-          <p>This will scan all attendance records and create new member entries for any unique attendees that don't already exist in the members list.</p>
-          <p class="text-muted small">New members will be created with a default combat power of 0.</p>
-        </div>
-        <div *ngIf="syncResult" class="alert alert-success">
-          <h6><i class="bi bi-check-circle"></i> Sync Completed</h6>
-          <ul class="mb-0">
-            <li>Total unique attendees found: {{ syncResult.totalAttendees }}</li>
-            <li>New members added: {{ syncResult.newMembersAdded }}</li>
-            <li>Total members now: {{ syncResult.totalMembers }}</li>
-          </ul>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeModals()">Close</button>
-        <button type="button" class="btn btn-primary" (click)="syncFromAttendance()" *ngIf="!syncResult && !loading">
-          <i class="bi bi-arrow-repeat"></i> Start Sync
-        </button>
-        <button type="button" class="btn btn-primary" disabled *ngIf="loading">
-          <span class="spinner-border spinner-border-sm" role="status"></span> Syncing...
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <!-- Modal Backdrop -->
-<div class="modal-backdrop fade show" *ngIf="showCreateModal || showEditModal || showDeleteModal || showSyncModal"></div>
+<div class="modal-backdrop fade show" *ngIf="showCreateModal || showEditModal || showDeleteModal"></div>

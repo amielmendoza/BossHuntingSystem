@@ -214,81 +214,7 @@ namespace BossHuntingSystem.Server.Controllers
             }
         }
 
-        [HttpPost("sync-from-attendance")]
-        public async Task<ActionResult<SyncResultDto>> SyncFromAttendance()
-        {
-            try
-            {
-                // Get all BossDefeat records first, then process attendees in memory
-                var allRecords = await _context.BossDefeats.ToListAsync();
-                
-                // Extract all unique attendee names from the records
-                var allAttendees = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var record in allRecords)
-                {
-                    var attendees = record.Attendees;
-                    foreach (var attendee in attendees)
-                    {
-                        if (!string.IsNullOrWhiteSpace(attendee))
-                        {
-                            allAttendees.Add(attendee.Trim());
-                        }
-                    }
-                }
 
-                // Get existing member names (case-insensitive comparison)
-                var existingMembers = await _context.Members
-                    .Select(m => m.Name.ToLower())
-                    .ToListAsync();
-
-                var newMembers = new List<Member>();
-                var addedCount = 0;
-
-                foreach (var attendeeName in allAttendees)
-                {
-                    // Check if member with this name already exists (case-insensitive)
-                    if (!existingMembers.Contains(attendeeName.ToLower()))
-                    {
-                        var newMember = new Member
-                        {
-                            Name = attendeeName,
-                            CombatPower = 0, // Default combat power
-                            GcashNumber = null,
-                            GcashName = null,
-                            CreatedAtUtc = DateTime.UtcNow,
-                            UpdatedAtUtc = DateTime.UtcNow
-                        };
-                        newMembers.Add(newMember);
-                        addedCount++;
-                    }
-                }
-
-                if (newMembers.Any())
-                {
-                    _context.Members.AddRange(newMembers);
-                    await _context.SaveChangesAsync();
-                }
-
-                var result = new SyncResultDto
-                {
-                    TotalAttendees = allAttendees.Count,
-                    NewMembersAdded = addedCount,
-                    TotalMembers = await _context.Members.CountAsync()
-                };
-                
-                // Add cache control headers to prevent caching
-                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-                Response.Headers["Pragma"] = "no-cache";
-                Response.Headers["Expires"] = "0";
-                
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[SyncFromAttendance] Error: {ex.Message}");
-                return StatusCode(500, "Database error occurred");
-            }
-        }
     }
 
     // DTOs
@@ -311,10 +237,5 @@ namespace BossHuntingSystem.Server.Controllers
         public string? GcashName { get; set; }
     }
 
-    public class SyncResultDto
-    {
-        public int TotalAttendees { get; set; }
-        public int NewMembersAdded { get; set; }
-        public int TotalMembers { get; set; }
-    }
+
 }
