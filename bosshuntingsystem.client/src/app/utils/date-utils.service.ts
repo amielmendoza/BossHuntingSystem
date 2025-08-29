@@ -17,10 +17,8 @@ export class DateUtilsService {
     }
     
     // Create a Date object from the UTC string
-    const utcDate = new Date(utcDateInput);
-    
-    // Convert to local time by adjusting for timezone offset
-    const localDate = new Date(utcDate.getTime() - (utcDate.getTimezoneOffset() * 60000));
+    // The Date constructor automatically converts UTC to local time
+    const localDate = new Date(utcDateInput);
     
     return localDate;
   }
@@ -31,7 +29,10 @@ export class DateUtilsService {
    * @returns UTC ISO string
    */
   localToUtc(localDate: Date): string {
-    return localDate.toISOString();
+    // The datetime-local input already provides a local date
+    // We need to convert it to UTC for the server
+    const utcTime = new Date(localDate.getTime() - (localDate.getTimezoneOffset() * 60000));
+    return utcTime.toISOString();
   }
 
   /**
