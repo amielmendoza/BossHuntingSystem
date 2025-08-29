@@ -7,6 +7,8 @@
       </div>
     </div>
 
+
+
     <!-- Notification Form -->
     <div class="cards">
       <div class="cardx span-12">
@@ -53,9 +55,9 @@
 
         <!-- Result Message -->
         <div *ngIf="lastResult" class="mt-3">
-          <div class="alert" [ngClass]="lastResult.success ? 'alert-success' : 'alert-danger'">
-            <i class="bi me-2" [ngClass]="lastResult.success ? 'bi-check-circle' : 'bi-exclamation-triangle'"></i>
-            {{ lastResult.message }}
+          <div class="alert" [ngClass]="lastResult?.success ? 'alert-success' : 'alert-danger'">
+            <i class="bi me-2" [ngClass]="lastResult?.success ? 'bi-check-circle' : 'bi-exclamation-triangle'"></i>
+            {{ lastResult?.message || 'Unknown result' }}
           </div>
         </div>
 

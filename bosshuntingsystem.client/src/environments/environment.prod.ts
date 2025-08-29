@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiBaseUrl: '' // Empty for same-domain deployment
+  apiBaseUrl: 'https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net'
 };

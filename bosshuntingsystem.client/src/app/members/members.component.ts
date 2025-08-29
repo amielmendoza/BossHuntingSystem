@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { BossService, MemberDto, CreateUpdateMemberDto, SyncResultDto } from '../boss.service';
+import { BossService, MemberDto, CreateUpdateMemberDto, IpRestrictionInfo } from '../boss.service';
 
 @Component({
   selector: 'app-members',
@@ -11,11 +11,14 @@ export class MembersComponent implements OnInit {
   loading = false;
   error = '';
   
+  // IP restriction state
+  ipRestrictionInfo: IpRestrictionInfo | null = null;
+  isIpRestricted = false;
+  
   // Modal states
   showCreateModal = false;
   showEditModal = false;
   showDeleteModal = false;
-  showSyncModal = false;
   
   // Form data
   createForm: CreateUpdateMemberDto = {
@@ -33,12 +36,35 @@ export class MembersComponent implements OnInit {
   };
   
   selectedMember: MemberDto | null = null;
-  syncResult: SyncResultDto | null = null;
 
   constructor(private bossApi: BossService) {}
 
   ngOnInit(): void {
+    // Check IP restrictions first
+    this.checkIpRestrictions();
     this.loadMembers();
+  }
+
+  checkIpRestrictions(): void {
+    this.bossApi.checkIpRestrictions().subscribe({
+      next: (info) => {
+        this.ipRestrictionInfo = info;
+        this.isIpRestricted = info.isRestricted;
+        console.log('[Members] IP restriction check:', info);
+        console.log('[Members] Client IP:', info.clientIp);
+        console.log('[Members] Is Restricted:', info.isRestricted);
+      },
+      error: (e) => {
+        console.error('Failed to check IP restrictions', e);
+        // If we can't check, assume restricted for security
+        this.isIpRestricted = true;
+      }
+    });
+  }
+
+  // Check if user has permission to access restricted features
+  public hasRestrictedAccess(): boolean {
+    return !this.isIpRestricted;
   }
 
   loadMembers(): void {
@@ -87,17 +113,11 @@ export class MembersComponent implements OnInit {
     this.showDeleteModal = true;
   }
 
-  openSyncModal(): void {
-    this.showSyncModal = true;
-  }
-
   closeModals(): void {
     this.showCreateModal = false;
     this.showEditModal = false;
     this.showDeleteModal = false;
-    this.showSyncModal = false;
     this.selectedMember = null;
-    this.syncResult = null;
   }
 
   createMember(): void {
@@ -190,24 +210,7 @@ export class MembersComponent implements OnInit {
     });
   }
 
-  syncFromAttendance(): void {
-    this.loading = true;
-    this.error = '';
 
-    this.bossApi.syncMembersFromAttendance().subscribe({
-      next: (result) => {
-        this.syncResult = result;
-        this.loading = false;
-        // Reload members to show newly added ones
-        this.loadMembers();
-      },
-      error: (e) => {
-        console.error('Failed to sync members', e);
-        this.error = e.error || 'Failed to sync members from attendance';
-        this.loading = false;
-      }
-    });
-  }
 
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleString();
