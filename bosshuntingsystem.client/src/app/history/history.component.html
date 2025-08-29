@@ -76,7 +76,7 @@
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <strong>Loots</strong>
                 <div class="d-flex align-items-center gap-2">
-                  <span class="badge text-bg-secondary">{{ details.loots?.length || 0 }} items</span>
+                  <span class="badge text-bg-secondary">{{ details.loots.length || 0 }} items</span>
                   <span class="badge text-bg-success" *ngIf="getTotalLootValue(details) > 0">
                     Total: ₱{{ getTotalLootValue(details) | number:'1.2-2' }}
                   </span>
@@ -130,7 +130,7 @@
             <div class="mb-3">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <strong>Attendees</strong>
-                <span class="badge text-bg-secondary">{{ details.attendees?.length || 0 }} players</span>
+                <span class="badge text-bg-secondary">{{ details.attendees.length || 0 }} players</span>
               </div>
               <div class="table-responsive" *ngIf="details.attendees && details.attendees.length > 0">
                 <table class="table table-sm table-striped">

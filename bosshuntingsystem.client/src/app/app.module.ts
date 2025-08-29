@@ -22,8 +22,8 @@ import { DateUtilsService } from './utils/date-utils.service';
     HistoryComponent,
     NotificationsComponent,
     MembersComponent,
-    JaeComponent,
-    DashboardComponent
+    DashboardComponent,
+    JaeComponent
   ],
   imports: [
     BrowserModule, CommonModule, HttpClientModule, FormsModule, RouterModule,
