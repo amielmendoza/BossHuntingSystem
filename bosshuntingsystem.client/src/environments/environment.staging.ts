@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiBaseUrl: 'https://bosshuntingsystem-bbeeekgbb0atcngn.southeastasia-01.azurewebsites.net'
+  apiBaseUrl: 'https://parakapi-g9f7f2hngzhgahbs.southeastasia-01.azurewebsites.net'
 };
