@@ -2,16 +2,19 @@ import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
-import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HistoryComponent } from './history/history.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MembersComponent } from './members/members.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
 import { CacheInterceptor } from './cache-interceptor';
 import { JaeComponent } from './jae/jae.component';
+import { DateUtilsService } from './utils/date-utils.service';
 
 @NgModule({
   declarations: [
@@ -19,19 +22,20 @@ import { JaeComponent } from './jae/jae.component';
     HistoryComponent,
     NotificationsComponent,
     MembersComponent,
+    DashboardComponent,
     JaeComponent
   ],
   imports: [
-    BrowserModule, CommonModule, HttpClientModule, FormsModule,
-    AppRoutingModule,
-    NgbModule
+    BrowserModule, CommonModule, HttpClientModule, FormsModule, RouterModule,
+    AppRoutingModule, NgbModule
   ],
   providers: [
     {
       provide: HTTP_INTERCEPTORS,
       useClass: CacheInterceptor,
       multi: true
-    }
+    },
+    DateUtilsService
   ],
   bootstrap: [AppComponent]
 })

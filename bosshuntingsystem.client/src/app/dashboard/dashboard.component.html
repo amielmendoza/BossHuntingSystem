@@ -1,0 +1,70 @@
+<div class="cards">
+  <!-- Boss Hunting System: Create/Edit Boss Form -->
+  <div class="cardx span-12">
+    <form class="row g-2 align-items-end" (ngSubmit)="saveBoss()">
+      <div class="col-12 col-md-3">
+        <label class="form-label small text-muted">Name</label>
+        <input class="form-control" [(ngModel)]="editModel.name" name="name" required>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted">Respawn (hours)</label>
+        <input type="number" min="1" class="form-control" [(ngModel)]="editModel.respawnHours" name="respawnHours" required>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small text-muted">Last Killed At</label>
+        <input type="datetime-local" class="form-control"
+               [(ngModel)]="editModel.lastKilledAt" name="lastKilledAt">
+      </div>
+      <div class="col-12 col-md-1 d-grid">
+        <button type="submit" class="btn btn-primary">{{ editModel.id ? 'Update' : 'Add' }}</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Boss Hunting System: Boss List -->
+  <div class="cardx span-12">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="fw-semibold">Boss Monsters</div>
+      <div class="small text-muted">Name, Respawn, Countdown</div>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:32px"></th>
+            <th>Name</th>
+            <th>Respawn Time</th>
+            <th>Next Respawn</th>
+            <th>Countdown</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let b of bosses">
+            <td><span class="bullet"></span></td>
+            <td class="it-title">{{ b.name }}</td>
+            <td class="text-secondary">{{ b.respawnHours }} hrs</td>
+            <td class="text-secondary">{{ dateUtils.formatForDisplay(nextRespawnAt(b)) }}</td>
+            <td>
+              <span class="badge" [ngClass]="isAvailable(b) ? 'text-bg-success' : 'text-bg-warning'">
+                {{ countdownText(b) }}
+              </span>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-success me-1" [disabled]="!isAvailable(b)" (click)="defeat(b)">Defeat</button>
+              <button class="btn btn-sm btn-info me-1" (click)="addHistory(b)">History</button>
+              <button class="btn btn-sm btn-outline-secondary me-1" (click)="startEdit(b)">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" 
+                      (click)="deleteBoss(b.id)" 
+                      title="Delete Boss">
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+

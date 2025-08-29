@@ -28,18 +28,18 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should retrieve weather forecasts from the server', () => {
-    const mockForecasts = [
-      { date: '2021-10-01', temperatureC: 20, temperatureF: 68, summary: 'Mild' },
-      { date: '2021-10-02', temperatureC: 25, temperatureF: 77, summary: 'Warm' }
+  it('should load bosses on initialization', () => {
+    const mockBosses = [
+      { id: 1, name: 'Test Boss', respawnHours: 24, lastKilledAt: '2023-01-01T00:00:00Z', nextRespawnAt: '2023-01-02T00:00:00Z', isAvailable: true }
     ];
 
     component.ngOnInit();
 
-    const req = httpMock.expectOne('/weatherforecast');
+    const req = httpMock.expectOne('/api/bosses');
     expect(req.request.method).toEqual('GET');
-    req.flush(mockForecasts);
+    req.flush(mockBosses);
 
-    expect(component.forecasts).toEqual(mockForecasts);
+    expect(component.bosses.length).toBe(1);
+    expect(component.bosses[0].name).toBe('Test Boss');
   });
 });

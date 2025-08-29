@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BossHuntingSystem.Server.Data;
 using BossHuntingSystem.Server.Services;
+using BossHuntingSystem.Server.Models;
+using Microsoft.Extensions.Options;
 
 namespace BossHuntingSystem.Server.Controllers
 {
@@ -432,23 +434,6 @@ namespace BossHuntingSystem.Server.Controllers
                 attendees.Add(attendeeName);
                 record.Attendees = attendees;
 
-                // Check if member already exists, if not, add them to members table
-                var existingMember = await _context.Members.FirstOrDefaultAsync(m => m.Name.ToLower() == attendeeName.ToLower());
-                if (existingMember == null)
-                {
-                    var newMember = new Data.Member
-                    {
-                        Name = attendeeName,
-                        CombatPower = 0, // Default combat power
-                        GcashNumber = null,
-                        GcashName = null,
-                        CreatedAtUtc = DateTime.UtcNow,
-                        UpdatedAtUtc = DateTime.UtcNow
-                    };
-                    _context.Members.Add(newMember);
-                    Console.WriteLine($"[AddAttendee] Auto-created new member: {attendeeName}");
-                }
-
                 await _context.SaveChangesAsync();
                 
                 // Add cache control headers to prevent caching
@@ -622,14 +607,45 @@ namespace BossHuntingSystem.Server.Controllers
             var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
             var connectionIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 
+            // Get IP restriction configuration
+            var ipRestrictionsConfig = HttpContext.RequestServices.GetService<IOptions<IpRestrictionsConfig>>()?.Value;
+            var isRestricted = false;
+            var restrictedEndpoints = new List<string>();
+
+            Console.WriteLine($"[Debug] Client IP: {clientIp}");
+            Console.WriteLine($"[Debug] IP Restrictions Enabled: {ipRestrictionsConfig?.Enabled}");
+            Console.WriteLine($"[Debug] Allowed IPs: {string.Join(", ", ipRestrictionsConfig?.AllowedIps ?? new List<string>())}");
+            Console.WriteLine($"[Debug] Restricted Endpoints: {string.Join(", ", ipRestrictionsConfig?.RestrictedEndpoints ?? new List<string>())}");
+
+            if (ipRestrictionsConfig != null && ipRestrictionsConfig.Enabled)
+            {
+                // Check if any restricted endpoints exist
+                restrictedEndpoints = ipRestrictionsConfig.RestrictedEndpoints;
+                
+                // Check if client IP is in allowed list
+                var isAllowed = ipRestrictionsConfig.AllowedIps.Any(allowedIp => 
+                    IsIpMatch(clientIp, allowedIp));
+                
+                Console.WriteLine($"[Debug] Is Allowed: {isAllowed}");
+                Console.WriteLine($"[Debug] Has Restricted Endpoints: {restrictedEndpoints.Any()}");
+                
+                // If there are restricted endpoints and IP is not allowed, then it's restricted
+                isRestricted = restrictedEndpoints.Any() && !isAllowed;
+                
+                Console.WriteLine($"[Debug] Final isRestricted: {isRestricted}");
+            }
+
             return Ok(new
             {
-                ClientIp = clientIp,
+                clientIp = clientIp,
+                isRestricted = isRestricted,
+                restrictedEndpoints = restrictedEndpoints,
+                allowedIps = ipRestrictionsConfig?.AllowedIps ?? new List<string>(),
+                ipRestrictionsEnabled = ipRestrictionsConfig?.Enabled ?? false,
                 ForwardedFor = forwardedFor,
                 RealIp = realIp,
                 ConnectionIp = connectionIp,
-                UserAgent = Request.Headers["User-Agent"].FirstOrDefault(),
-                AllHeaders = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())
+                UserAgent = Request.Headers["User-Agent"].FirstOrDefault()
             });
         }
 
@@ -651,6 +667,24 @@ namespace BossHuntingSystem.Server.Controllers
 
             // Fallback to connection remote IP
             return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+
+        private bool IsIpMatch(string clientIp, string allowedIp)
+        {
+            Console.WriteLine($"[IsIpMatch] Comparing clientIp: '{clientIp}' with allowedIp: '{allowedIp}'");
+
+            // Extract IP part from client IP (remove port if present)
+            var clientIpPart = clientIp.Split(':')[0];
+            
+            // Extract IP part from allowed IP (remove port if present)
+            var allowedIpPart = allowedIp.Split(':')[0];
+
+            Console.WriteLine($"[IsIpMatch] After port removal - clientIpPart: '{clientIpPart}', allowedIpPart: '{allowedIpPart}'");
+
+            // Exact match on IP parts
+            var result = clientIpPart.Equals(allowedIpPart, StringComparison.OrdinalIgnoreCase);
+            Console.WriteLine($"[IsIpMatch] Result: {result}");
+            return result;
         }
     }
 
