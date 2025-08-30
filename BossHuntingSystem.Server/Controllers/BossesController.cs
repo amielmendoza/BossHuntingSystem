@@ -319,13 +319,15 @@ namespace BossHuntingSystem.Server.Controllers
                 if (existing == null) return NotFound();
 
                 // When a boss is defeated, we set the last kill time to now (UTC)
-                existing.LastKilledAt = DateTime.UtcNow;
+                // Use the same timezone handling as other methods for consistency
+                var currentUtc = DateTime.UtcNow;
+                existing.LastKilledAt = currentUtc;
 
                 var defeat = new BossDefeat
                 {
                     BossId = existing.Id,
                     BossName = existing.Name,
-                    DefeatedAtUtc = existing.LastKilledAt,
+                    DefeatedAtUtc = currentUtc, // Store as UTC for consistency
                     LootsJson = "[]",
                     AttendeesJson = "[]"
                 };
@@ -350,10 +352,14 @@ namespace BossHuntingSystem.Server.Controllers
         [HttpPost("{id:int}/add-history")]
         public async Task<ActionResult<BossDefeat>> AddHistory(int id)
         {
+            Console.WriteLine($"[AddHistory] Request received for boss ID: {id}");
+            
             try
             {
                 var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null) return NotFound();
+
+                Console.WriteLine($"[AddHistory] Creating history record for boss: {existing.Name} (ID: {existing.Id})");
 
                 // Create history record without resetting the respawn timer
                 // DefeatedAtUtc is null since this is just a history entry, not an actual defeat
@@ -368,6 +374,8 @@ namespace BossHuntingSystem.Server.Controllers
 
                 _context.BossDefeats.Add(historyRecord);
                 await _context.SaveChangesAsync();
+
+                Console.WriteLine($"[AddHistory] History record created successfully with ID: {historyRecord.Id}");
 
                 // Add cache control headers to prevent caching
                 Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
@@ -599,93 +607,7 @@ namespace BossHuntingSystem.Server.Controllers
             }
         }
 
-        [HttpGet("debug/ip")]
-        public IActionResult GetClientIp()
-        {
-            var clientIp = GetClientIpAddress();
-            var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
-            var connectionIp = HttpContext.Connection.RemoteIpAddress?.ToString();
 
-            // Get IP restriction configuration
-            var ipRestrictionsConfig = HttpContext.RequestServices.GetService<IOptions<IpRestrictionsConfig>>()?.Value;
-            var isRestricted = false;
-            var restrictedEndpoints = new List<string>();
-
-            Console.WriteLine($"[Debug] Client IP: {clientIp}");
-            Console.WriteLine($"[Debug] IP Restrictions Enabled: {ipRestrictionsConfig?.Enabled}");
-            Console.WriteLine($"[Debug] Allowed IPs: {string.Join(", ", ipRestrictionsConfig?.AllowedIps ?? new List<string>())}");
-            Console.WriteLine($"[Debug] Restricted Endpoints: {string.Join(", ", ipRestrictionsConfig?.RestrictedEndpoints ?? new List<string>())}");
-
-            if (ipRestrictionsConfig != null && ipRestrictionsConfig.Enabled)
-            {
-                // Check if any restricted endpoints exist
-                restrictedEndpoints = ipRestrictionsConfig.RestrictedEndpoints;
-                
-                // Check if client IP is in allowed list
-                var isAllowed = ipRestrictionsConfig.AllowedIps.Any(allowedIp => 
-                    IsIpMatch(clientIp, allowedIp));
-                
-                Console.WriteLine($"[Debug] Is Allowed: {isAllowed}");
-                Console.WriteLine($"[Debug] Has Restricted Endpoints: {restrictedEndpoints.Any()}");
-                
-                // If there are restricted endpoints and IP is not allowed, then it's restricted
-                isRestricted = restrictedEndpoints.Any() && !isAllowed;
-                
-                Console.WriteLine($"[Debug] Final isRestricted: {isRestricted}");
-            }
-
-            return Ok(new
-            {
-                clientIp = clientIp,
-                isRestricted = isRestricted,
-                restrictedEndpoints = restrictedEndpoints,
-                allowedIps = ipRestrictionsConfig?.AllowedIps ?? new List<string>(),
-                ipRestrictionsEnabled = ipRestrictionsConfig?.Enabled ?? false,
-                ForwardedFor = forwardedFor,
-                RealIp = realIp,
-                ConnectionIp = connectionIp,
-                UserAgent = Request.Headers["User-Agent"].FirstOrDefault()
-            });
-        }
-
-        private string GetClientIpAddress()
-        {
-            // Check for forwarded headers (for when behind proxy/load balancer)
-            var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(forwardedFor))
-            {
-                // X-Forwarded-For can contain multiple IPs, take the first one
-                return forwardedFor.Split(',')[0].Trim();
-            }
-
-            var realIp = Request.Headers["X-Real-IP"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(realIp))
-            {
-                return realIp;
-            }
-
-            // Fallback to connection remote IP
-            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        }
-
-        private bool IsIpMatch(string clientIp, string allowedIp)
-        {
-            Console.WriteLine($"[IsIpMatch] Comparing clientIp: '{clientIp}' with allowedIp: '{allowedIp}'");
-
-            // Extract IP part from client IP (remove port if present)
-            var clientIpPart = clientIp.Split(':')[0];
-            
-            // Extract IP part from allowed IP (remove port if present)
-            var allowedIpPart = allowedIp.Split(':')[0];
-
-            Console.WriteLine($"[IsIpMatch] After port removal - clientIpPart: '{clientIpPart}', allowedIpPart: '{allowedIpPart}'");
-
-            // Exact match on IP parts
-            var result = clientIpPart.Equals(allowedIpPart, StringComparison.OrdinalIgnoreCase);
-            Console.WriteLine($"[IsIpMatch] Result: {result}");
-            return result;
-        }
     }
 
     // DTOs - keeping these in the same file for now but they could be moved to separate files

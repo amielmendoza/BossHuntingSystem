@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { BossDefeatDto, MemberDto, BossService, IpRestrictionInfo } from '../boss.service';
+import { BossDefeatDto, MemberDto, BossService } from '../boss.service';
 import { Subscription, firstValueFrom } from 'rxjs';
 import Tesseract from 'tesseract.js';
 import { DateUtilsService } from '../utils/date-utils.service';
@@ -26,17 +26,13 @@ export class HistoryComponent implements OnInit, OnDestroy {
   ocrSuggestions: string[] = [];
   ocrAddedCount = 0;
   
-  // IP restriction state
-  ipRestrictionInfo: IpRestrictionInfo | null = null;
-  isIpRestricted = false;
+
 
   constructor(private bossApi: BossService, private _dateUtils: DateUtilsService) {
     this.dateUtils = _dateUtils;
   }
 
   ngOnInit(): void {
-    // Check IP restrictions first
-    this.checkIpRestrictions();
     this.loadMembers();
     
     const load = () => this.bossApi.history().subscribe({
@@ -49,31 +45,6 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
-  }
-
-  checkIpRestrictions(): void {
-    this.bossApi.checkIpRestrictions().subscribe({
-      next: (info) => {
-        this.ipRestrictionInfo = info;
-        // Check if any restricted endpoints are being accessed
-        this.isIpRestricted = info.isRestricted;
-        console.log('[History] IP restriction check:', info);
-        console.log('[History] Client IP:', info.clientIp);
-        console.log('[History] Is Restricted:', info.isRestricted);
-        console.log('[History] Allowed IPs:', info.allowedIps);
-        console.log('[History] IP Restrictions Enabled:', info.ipRestrictionsEnabled);
-        console.log('[History] Final isIpRestricted value:', this.isIpRestricted);
-        console.log('[History] Buttons should be hidden:', this.isIpRestricted);
-        
-
-      },
-      error: (e) => {
-        console.error('Failed to check IP restrictions', e);
-        // If we can't check, assume restricted for security
-        this.isIpRestricted = true;
-        console.log('[History] Error fallback - isIpRestricted set to:', this.isIpRestricted);
-      }
-    });
   }
 
   checkCp(): void {

@@ -54,13 +54,7 @@ export interface CreateUpdateMemberDto {
 
 
 
-export interface IpRestrictionInfo {
-  clientIp: string;
-  isRestricted: boolean;
-  restrictedEndpoints: string[];
-  allowedIps: string[];
-  ipRestrictionsEnabled: boolean;
-}
+
 
 @Injectable({ providedIn: 'root' })
 export class BossService {
@@ -168,10 +162,7 @@ export class BossService {
     return this.http.post(this.url('/api/bosses/notify'), { message });
   }
 
-  // IP restriction check
-  checkIpRestrictions(): Observable<IpRestrictionInfo> {
-    return this.http.get<IpRestrictionInfo>(this.url('/api/bosses/debug/ip'));
-  }
+
 }
 
 

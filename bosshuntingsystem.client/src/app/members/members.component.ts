@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { BossService, MemberDto, CreateUpdateMemberDto, IpRestrictionInfo } from '../boss.service';
+import { BossService, MemberDto, CreateUpdateMemberDto } from '../boss.service';
 
 @Component({
   selector: 'app-members',
@@ -11,9 +11,7 @@ export class MembersComponent implements OnInit {
   loading = false;
   error = '';
   
-  // IP restriction state
-  ipRestrictionInfo: IpRestrictionInfo | null = null;
-  isIpRestricted = false;
+
   
   // Modal states
   showCreateModal = false;
@@ -40,31 +38,7 @@ export class MembersComponent implements OnInit {
   constructor(private bossApi: BossService) {}
 
   ngOnInit(): void {
-    // Check IP restrictions first
-    this.checkIpRestrictions();
     this.loadMembers();
-  }
-
-  checkIpRestrictions(): void {
-    this.bossApi.checkIpRestrictions().subscribe({
-      next: (info) => {
-        this.ipRestrictionInfo = info;
-        this.isIpRestricted = info.isRestricted;
-        console.log('[Members] IP restriction check:', info);
-        console.log('[Members] Client IP:', info.clientIp);
-        console.log('[Members] Is Restricted:', info.isRestricted);
-      },
-      error: (e) => {
-        console.error('Failed to check IP restrictions', e);
-        // If we can't check, assume restricted for security
-        this.isIpRestricted = true;
-      }
-    });
-  }
-
-  // Check if user has permission to access restricted features
-  public hasRestrictedAccess(): boolean {
-    return !this.isIpRestricted;
   }
 
   loadMembers(): void {

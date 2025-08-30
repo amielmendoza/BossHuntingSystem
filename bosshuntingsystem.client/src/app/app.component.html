@@ -1,10 +1,5 @@
 ﻿<div class="d-flex p-2 gap-2 w-full vh-100">
-  <!-- Loading overlay -->
-  <div *ngIf="isLoadingIpCheck" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 9999;">
-    <div class="spinner-border text-light" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-  </div>
+
 
   <!-- Left Sidebar (kept minimal) -->
   <aside class="sidebar d-none d-md-block w-10 h-100" [ngClass]="{'w-auto': menu.isOpen}">

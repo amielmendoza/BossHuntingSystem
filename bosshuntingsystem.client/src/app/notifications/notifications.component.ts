@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { BossService, IpRestrictionInfo } from '../boss.service';
+import { BossService } from '../boss.service';
 
 @Component({
   selector: 'app-notifications',
@@ -11,37 +11,12 @@ export class NotificationsComponent implements OnInit {
   isSending: boolean = false;
   lastResult: { success: boolean; message: string } | null = null;
   
-  // IP restriction state
-  ipRestrictionInfo: IpRestrictionInfo | null = null;
-  isIpRestricted = false;
+
 
   constructor(private bossApi: BossService) {}
 
   ngOnInit(): void {
-    // Check IP restrictions
-    this.checkIpRestrictions();
-  }
-
-  checkIpRestrictions(): void {
-    this.bossApi.checkIpRestrictions().subscribe({
-      next: (info) => {
-        this.ipRestrictionInfo = info;
-        this.isIpRestricted = info.isRestricted;
-        console.log('[Notifications] IP restriction check:', info);
-        console.log('[Notifications] Client IP:', info.clientIp);
-        console.log('[Notifications] Is Restricted:', info.isRestricted);
-      },
-      error: (e) => {
-        console.error('Failed to check IP restrictions', e);
-        // If we can't check, assume restricted for security
-        this.isIpRestricted = true;
-      }
-    });
-  }
-
-  // Check if user has permission to access restricted features
-  public hasRestrictedAccess(): boolean {
-    return !this.isIpRestricted;
+    // Component initialized
   }
 
   sendNotification(): void {

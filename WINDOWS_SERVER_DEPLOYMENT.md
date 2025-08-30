@@ -198,17 +198,7 @@ Update `appsettings.Production.json` with your production values:
   "AZURE_VISION_ENDPOINT": "https://your-vision-endpoint.cognitiveservices.azure.com/",
   "AZURE_VISION_API_KEY": "your-vision-api-key",
   "DISCORD_WEBHOOK_URL": "your-discord-webhook-url",
-  "IpRestrictions": {
-    "Enabled": true,
-    "AllowedIps": ["your-server-ip"],
-    "RestrictedEndpoints": [
-      "POST:/api/bosses/history/*/loot",
-      "POST:/api/bosses/history/*/attendee",
-      "DELETE:/api/bosses/history/*/loot/*",
-      "DELETE:/api/bosses/history/*/attendee/*",
-      "DELETE:/api/bosses/history/*"
-    ]
-  }
+
 }
 ```
 
@@ -317,4 +307,5 @@ Your BossHuntingSystem is now deployed and running on Windows Server. The applic
 ---
 
 **📞 Support**: If you encounter issues, check the application logs and IIS logs for detailed error information.
+
 

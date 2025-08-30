@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { interval, Subscription } from 'rxjs';
-import { BossService, BossDto, BossCreateUpdateDto, IpRestrictionInfo } from '../boss.service';
+import { BossService, BossDto, BossCreateUpdateDto } from '../boss.service';
 import { DateUtilsService } from '../utils/date-utils.service';
 
 type Boss = {
@@ -24,9 +24,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private timerSubscription?: Subscription;
   private nowEpochMs: number = Date.now();
   
-  // IP restriction state
-  ipRestrictionInfo: IpRestrictionInfo | null = null;
-  isIpRestricted = false;
+
+  
+  // Loading states
+  public historyLoadingStates: { [bossId: number]: boolean } = {};
 
   constructor(
     private http: HttpClient, 
@@ -38,8 +39,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     console.log('[BossHunt] DashboardComponent init');
-    // Check IP restrictions first
-    this.checkIpRestrictions();
     this.loadBosses();
     this.timerSubscription = interval(1000).subscribe(() => {
       this.nowEpochMs = Date.now();
@@ -48,28 +47,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.timerSubscription?.unsubscribe();
-  }
-
-  checkIpRestrictions(): void {
-    this.bossApi.checkIpRestrictions().subscribe({
-      next: (info) => {
-        this.ipRestrictionInfo = info;
-        this.isIpRestricted = info.isRestricted;
-        console.log('[Dashboard] IP restriction check:', info);
-        console.log('[Dashboard] Client IP:', info.clientIp);
-        console.log('[Dashboard] Is Restricted:', info.isRestricted);
-      },
-      error: (e) => {
-        console.error('Failed to check IP restrictions', e);
-        // If we can't check, assume restricted for security
-        this.isIpRestricted = true;
-      }
-    });
-  }
-
-  // Check if user has permission to access restricted features
-  public hasRestrictedAccess(): boolean {
-    return !this.isIpRestricted;
   }
 
   private loadBosses(): void {
@@ -178,11 +155,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   addHistory(boss: Boss): void {
+    // Prevent double-clicking
+    if (this.historyLoadingStates[boss.id]) {
+      console.log('[Dashboard] History request already in progress for boss:', boss.id);
+      return;
+    }
+    
+    console.log('[Dashboard] Adding history for boss:', boss.id, boss.name);
+    this.historyLoadingStates[boss.id] = true;
+    
     this.bossApi.addHistory(boss.id).subscribe({
       next: (historyRecord) => {
-        console.log('History record added:', historyRecord);
+        console.log('[Dashboard] History record added successfully:', historyRecord);
+        this.historyLoadingStates[boss.id] = false;
       },
-      error: (e) => console.error(e)
+      error: (e) => {
+        console.error('[Dashboard] Error adding history:', e);
+        this.historyLoadingStates[boss.id] = false;
+      }
     });
   }
 
