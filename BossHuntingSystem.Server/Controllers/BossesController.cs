@@ -270,7 +270,7 @@ namespace BossHuntingSystem.Server.Controllers
 
                 existing.Name = dto.Name.Trim();
                 existing.RespawnHours = dto.RespawnHours;
-                existing.LastKilledAt = lastKilledAtUtc;
+                existing.LastKilledAt = lastKilledAtUtc.AddHours(-8);
                 existing.Killer = dto.Killer?.Trim();
 
                 await _context.SaveChangesAsync();
