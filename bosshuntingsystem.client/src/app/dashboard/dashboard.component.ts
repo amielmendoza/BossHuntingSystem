@@ -138,9 +138,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     if (this.editModel.lastKilledAt.trim() !== '') {
       // The datetime-local input provides a PHT time string
-      // Convert to PHT Date and then to UTC for server
+      // Send PHT time directly to backend - let backend convert to UTC
       const phtDate = this._dateUtils.datetimeLocalToPht(this.editModel.lastKilledAt);
-      lastKilledAtValue = this._dateUtils.localToUtc(phtDate);
+      // Format as PHT time string for backend
+      const year = phtDate.getFullYear();
+      const month = String(phtDate.getMonth() + 1).padStart(2, '0');
+      const day = String(phtDate.getDate()).padStart(2, '0');
+      const hours = String(phtDate.getHours()).padStart(2, '0');
+      const minutes = String(phtDate.getMinutes()).padStart(2, '0');
+      const seconds = String(phtDate.getSeconds()).padStart(2, '0');
+      lastKilledAtValue = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
     
     const payload: BossCreateUpdateDto = {
