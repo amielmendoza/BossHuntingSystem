@@ -4,6 +4,7 @@ using BossHuntingSystem.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BossHuntingSystem.Server.Migrations
 {
     [DbContext(typeof(BossHuntingDbContext))]
-    partial class BossHuntingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250830040413_AddKillerFieldToBoss")]
+    partial class AddKillerFieldToBoss
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -81,10 +84,6 @@ namespace BossHuntingSystem.Server.Migrations
 
                     b.Property<DateTime?>("DefeatedAtUtc")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Killer")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("LootItemsJson")
                         .IsRequired()

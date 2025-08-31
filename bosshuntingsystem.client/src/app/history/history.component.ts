@@ -345,6 +345,12 @@ export class HistoryComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  // Helper method to format defeated at time (assumes backend returns PHT time)
+  formatDefeatedAt(defeatedAtUtc: string | null): string {
+    if (!defeatedAtUtc) return 'History Entry';
+    return this.dateUtils.formatPhtForDisplay(new Date(defeatedAtUtc));
+  }
 }
 
 

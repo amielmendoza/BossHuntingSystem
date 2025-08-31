@@ -29,6 +29,9 @@ namespace BossHuntingSystem.Server.Data
         [Column(TypeName = "nvarchar(max)")]
         public string LootItemsJson { get; set; } = "[]";
         
+        [MaxLength(100)]
+        public string? Killer { get; set; }
+        
         // Navigation property
         [ForeignKey("BossId")]
         public virtual Boss? Boss { get; set; }

@@ -17,6 +17,9 @@ namespace BossHuntingSystem.Server.Data
         [Required]
         public DateTime LastKilledAt { get; set; }
         
+        [MaxLength(100)]
+        public string? Killer { get; set; }
+        
         // Navigation property
         public virtual ICollection<BossDefeat> Defeats { get; set; } = new List<BossDefeat>();
     }

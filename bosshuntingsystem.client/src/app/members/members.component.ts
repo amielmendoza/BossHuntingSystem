@@ -187,6 +187,14 @@ export class MembersComponent implements OnInit {
 
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleString();
+    return new Date(dateString).toLocaleString('en-US', {
+      timeZone: 'Asia/Manila',
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   }
 }

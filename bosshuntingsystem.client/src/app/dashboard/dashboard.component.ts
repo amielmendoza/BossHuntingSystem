@@ -8,9 +8,9 @@ type Boss = {
   id: number;
   name: string;
   respawnHours: number;
-  lastKilledAt: Date;
-  nextRespawnAt: Date;
-  isAvailable: boolean;
+  lastKilledAt: Date; // PHT (Philippine Time) from backend
+  nextRespawnAt: Date; // PHT (Philippine Time) from backend
+  killer?: string;
 };
 
 @Component({
@@ -35,6 +35,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private _dateUtils: DateUtilsService
   ) {
     this.dateUtils = _dateUtils;
+    // Initialize with current time (backend already returns PHT times)
+    this.nowEpochMs = Date.now();
   }
 
   ngOnInit(): void {
@@ -55,14 +57,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (rows: BossDto[]) => {
         console.log('[BossHunt] /api/bosses OK', rows?.length);
         console.log('[BossHunt] Boss IDs received:', rows?.map(r => r.id));
-        this.bosses = rows.map(r => ({
-          id: r.id,
-          name: r.name,
-          respawnHours: r.respawnHours,
-          lastKilledAt: this._dateUtils.utcToLocal(r.lastKilledAt) || new Date(),
-          nextRespawnAt: this._dateUtils.utcToLocal(r.nextRespawnAt) || new Date(),
-          isAvailable: r.isAvailable
-        }));
+        this.bosses = rows.map(r => {
+          // Backend sends PHT dates directly - no timezone conversion needed
+          const nextRespawnAt = new Date(r.nextRespawnAt);
+          const lastKilledAt = new Date(r.lastKilledAt);
+          
+          // Debug logging for availability calculation
+          if (r.name === 'Venatus') {
+            const msUntilRespawn = nextRespawnAt.getTime() - this.nowEpochMs;
+            const currentPhtTime = this._dateUtils.getCurrentPhtTime();
+            console.log(`[DEBUG] ${r.name}:`, {
+              originalDate: r.nextRespawnAt,
+              parsedDate: nextRespawnAt.toISOString(),
+              currentTime: new Date(this.nowEpochMs).toISOString(),
+              currentPhtTime: currentPhtTime.toISOString(),
+              diffMs: msUntilRespawn,
+              diffHours: msUntilRespawn / (1000 * 60 * 60),
+              diffDays: msUntilRespawn / (1000 * 60 * 60 * 24),
+              calculatedIsAvailable: msUntilRespawn <= 0,
+              phtDiffMs: nextRespawnAt.getTime() - currentPhtTime.getTime(),
+              phtDiffHours: (nextRespawnAt.getTime() - currentPhtTime.getTime()) / (1000 * 60 * 60)
+            });
+          }
+          
+          return {
+            id: r.id,
+            name: r.name,
+            respawnHours: r.respawnHours,
+            lastKilledAt: lastKilledAt,
+            nextRespawnAt: nextRespawnAt,
+            killer: r.killer
+          };
+        });
         console.log('[BossHunt] Updated local bosses array, count:', this.bosses.length);
       },
       error: (err) => {
@@ -72,34 +98,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // CRUD actions
-  public editModel: { id?: number; name: string; respawnHours: number; lastKilledAt: string } =
-    { name: '', respawnHours: 1, lastKilledAt: '' };
+  public editModel: { id?: number; name: string; respawnHours: number; lastKilledAt: string; killer?: string } =
+    { name: '', respawnHours: 1, lastKilledAt: '', killer: '' };
 
   startNew(): void {
-    this.editModel = { name: '', respawnHours: 1, lastKilledAt: '' };
+    this.editModel = { name: '', respawnHours: 1, lastKilledAt: '', killer: '' };
   }
 
   startEdit(boss: Boss): void {
     this.bossApi.getById(boss.id).subscribe({
       next: (freshBoss) => {
-        const localDate = this._dateUtils.utcToLocal(freshBoss.lastKilledAt);
+        const phtDate = new Date(freshBoss.lastKilledAt);
         
         this.editModel = {
           id: freshBoss.id,
           name: freshBoss.name,
           respawnHours: freshBoss.respawnHours,
-          lastKilledAt: localDate ? localDate.toISOString().slice(0, 16) : ''
+          lastKilledAt: phtDate ? this._dateUtils.phtToDatetimeLocal(phtDate) : '',
+          killer: freshBoss.killer || ''
         };
       },
       error: (e) => {
         console.error('Error fetching boss data for edit:', e);
-        const localDate = this._dateUtils.utcToLocal(boss.lastKilledAt);
+        const phtDate = boss.lastKilledAt;
         
         this.editModel = {
           id: boss.id,
           name: boss.name,
           respawnHours: boss.respawnHours,
-          lastKilledAt: localDate ? localDate.toISOString().slice(0, 16) : ''
+          lastKilledAt: phtDate ? this._dateUtils.phtToDatetimeLocal(phtDate) : '',
+          killer: boss.killer || ''
         };
       }
     });
@@ -109,14 +137,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     let lastKilledAtValue: string | null = null;
     
     if (this.editModel.lastKilledAt.trim() !== '') {
-      const localDate = new Date(this.editModel.lastKilledAt);
-      lastKilledAtValue = this._dateUtils.localToUtc(localDate);
+      // The datetime-local input provides a PHT time string
+      // Convert to PHT Date and then to UTC for server
+      const phtDate = this._dateUtils.datetimeLocalToPht(this.editModel.lastKilledAt);
+      lastKilledAtValue = this._dateUtils.localToUtc(phtDate);
     }
     
     const payload: BossCreateUpdateDto = {
       name: this.editModel.name,
       respawnHours: this.editModel.respawnHours,
-      lastKilledAt: lastKilledAtValue
+      lastKilledAt: lastKilledAtValue,
+      killer: this.editModel.killer?.trim() || undefined
     };
     const onDone = () => { this.startNew(); this.loadBosses(); };
     if (this.editModel.id) {
@@ -143,12 +174,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   defeat(boss: Boss): void {
-    if (!boss.isAvailable) { return; }
-    this.bossApi.defeat(boss.id).subscribe({
+    if (!this.isAvailable(boss)) { return; }
+    
+    // Use the current killer value from the boss record
+    const killer = boss.killer;
+    
+    this.bossApi.defeat(boss.id, killer || undefined).subscribe({
       next: (updated) => {
-        boss.lastKilledAt = this._dateUtils.utcToLocal(updated.lastKilledAt) || new Date();
-        boss.nextRespawnAt = this._dateUtils.utcToLocal(updated.nextRespawnAt) || new Date();
-        boss.isAvailable = updated.isAvailable;
+        // Backend already returns PHT dates, no conversion needed
+        const nextRespawnAt = new Date(updated.nextRespawnAt);
+        const lastKilledAt = new Date(updated.lastKilledAt);
+        
+        boss.lastKilledAt = lastKilledAt;
+        boss.nextRespawnAt = nextRespawnAt;
+        boss.killer = updated.killer;
       },
       error: (e) => console.error(e)
     });
@@ -161,10 +200,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     
-    console.log('[Dashboard] Adding history for boss:', boss.id, boss.name);
+    // Use the current killer value from the boss record
+    const killer = boss.killer;
+    
+    // Get current PHT time for the defeated at timestamp
+    const currentPhtTime = this._dateUtils.getCurrentPhtTime();
+    const year = currentPhtTime.getFullYear();
+    const month = String(currentPhtTime.getMonth() + 1).padStart(2, '0');
+    const day = String(currentPhtTime.getDate()).padStart(2, '0');
+    const hours = String(currentPhtTime.getHours()).padStart(2, '0');
+    const minutes = String(currentPhtTime.getMinutes()).padStart(2, '0');
+    const seconds = String(currentPhtTime.getSeconds()).padStart(2, '0');
+    const defeatedAtPht = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    
+    console.log('[Dashboard] Adding history for boss:', boss.id, boss.name, 'at PHT time:', defeatedAtPht);
     this.historyLoadingStates[boss.id] = true;
     
-    this.bossApi.addHistory(boss.id).subscribe({
+    // Create payload with current PHT time
+    const payload = {
+      killer: killer?.trim() || undefined,
+      defeatedAt: defeatedAtPht
+    };
+    
+    this.bossApi.addHistory(boss.id, payload).subscribe({
       next: (historyRecord) => {
         console.log('[Dashboard] History record added successfully:', historyRecord);
         this.historyLoadingStates[boss.id] = false;
@@ -178,11 +236,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Boss timer helpers
   nextRespawnAt(boss: Boss): Date {
-    return boss.nextRespawnAt || new Date();
+    return boss.nextRespawnAt || this._dateUtils.getCurrentPhtTime();
   }
 
   msUntilRespawn(boss: Boss): number {
-    return (boss.nextRespawnAt || new Date()).getTime() - this.nowEpochMs;
+    const nextRespawnTime = boss.nextRespawnAt || this._dateUtils.getCurrentPhtTime();
+    const currentTime = this.nowEpochMs;
+    return nextRespawnTime.getTime() - currentTime;
   }
 
   isAvailable(boss: Boss): boolean {

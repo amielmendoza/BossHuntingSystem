@@ -8,15 +8,17 @@ export interface BossDto {
   id: number;
   name: string;
   respawnHours: number;
-  lastKilledAt: string; // UTC time from server
-  nextRespawnAt: string; // UTC time from server
+  lastKilledAt: string; // PHT (Philippine Time) from server
+  nextRespawnAt: string; // PHT (Philippine Time) from server
   isAvailable: boolean;
+  killer?: string;
 }
 
 export interface BossCreateUpdateDto {
   name: string;
   respawnHours: number;
   lastKilledAt: string | null;
+  killer?: string;
 }
 
 export interface LootItemDto {
@@ -30,6 +32,7 @@ export interface BossDefeatDto {
   bossName: string;
   combatPower: string[];
   defeatedAtUtc: string | null; // ISO date string from server, null for history entries
+  killer?: string;
   loots: string[];
   attendees: string[];
   lootItems?: LootItemDto[]; // New property for loot with prices
@@ -50,6 +53,14 @@ export interface CreateUpdateMemberDto {
   combatPower: number;
   gcashNumber?: string;
   gcashName?: string;
+}
+
+export interface DefeatBossDto {
+  killer?: string;
+}
+
+export interface AddHistoryDto {
+  killer?: string;
 }
 
 
@@ -73,7 +84,7 @@ export class BossService {
     const isAbsolute = /^https?:\/\//i.test(path);
     const basePlusPath = isAbsolute ? path : `${this.apiBase}${path}`;
     // Add cache-busting parameter to prevent caching
-    const timestamp = new Date().getTime();
+    const timestamp = Date.now();
     const separator = basePlusPath.includes('?') ? '&' : '?';
     return `${basePlusPath}${separator}_t=${timestamp}`; 
   }
@@ -82,12 +93,14 @@ export class BossService {
   getById(id: number): Observable<BossDto> { return this.http.get<BossDto>(this.url(`/api/bosses/${id}`)); }
   create(payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.post<BossDto>(this.url('/api/bosses'), payload); }
   update(id: number, payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.put<BossDto>(this.url(`/api/bosses/${id}`), payload); }
-  defeat(id: number): Observable<BossDto> {
-    return this.http.post<BossDto>(this.url(`/api/bosses/${id}/defeat`), {})
+  defeat(id: number, killer?: string): Observable<BossDto> {
+    const payload = killer ? { killer } : {};
+    return this.http.post<BossDto>(this.url(`/api/bosses/${id}/defeat`), payload)
       .pipe(tap(() => this.historyUpdated.next()));
   }
-  addHistory(id: number): Observable<BossDefeatDto> {
-    return this.http.post<BossDefeatDto>(this.url(`/api/bosses/${id}/add-history`), {})
+  addHistory(id: number, payload?: { killer?: string; defeatedAt?: string }): Observable<BossDefeatDto> {
+    const requestPayload = payload || {};
+    return this.http.post<BossDefeatDto>(this.url(`/api/bosses/${id}/add-history`), requestPayload)
       .pipe(tap(() => this.historyUpdated.next()));
   }
   history(): Observable<BossDefeatDto[]> { return this.http.get<BossDefeatDto[]>(this.url('/api/bosses/history')); }

@@ -44,15 +44,20 @@ namespace BossHuntingSystem.Server.Controllers
             var nextRespawnAtUtc = lastKilledAtUtc.AddHours(boss.RespawnHours);
             var currentUtc = DateTime.UtcNow;
 
-            // Send UTC times to frontend - let frontend handle timezone conversion
+            // Convert UTC times to PHT before sending to frontend
+            var lastKilledAtPht = ConvertUtcToPht(lastKilledAtUtc);
+            var nextRespawnAtPht = ConvertUtcToPht(nextRespawnAtUtc);
+            var currentPht = ConvertUtcToPht(currentUtc);
+
             return new BossResponseDto
             {
                 Id = boss.Id,
                 Name = boss.Name,
                 RespawnHours = boss.RespawnHours,
-                LastKilledAt = lastKilledAtUtc,
-                NextRespawnAt = nextRespawnAtUtc,
-                IsAvailable = nextRespawnAtUtc <= currentUtc
+                LastKilledAt = lastKilledAtPht,
+                NextRespawnAt = nextRespawnAtPht,
+                IsAvailable = nextRespawnAtPht <= currentPht,
+                Killer = boss.Killer
             };
         }
 
@@ -207,7 +212,8 @@ namespace BossHuntingSystem.Server.Controllers
                 {
                     Name = dto.Name.Trim(),
                     RespawnHours = dto.RespawnHours,
-                    LastKilledAt = lastKilledAtUtc
+                    LastKilledAt = lastKilledAtUtc,
+                    Killer = dto.Killer?.Trim()
                 };
 
                 _context.Bosses.Add(boss);
@@ -265,6 +271,7 @@ namespace BossHuntingSystem.Server.Controllers
                 existing.Name = dto.Name.Trim();
                 existing.RespawnHours = dto.RespawnHours;
                 existing.LastKilledAt = lastKilledAtUtc;
+                existing.Killer = dto.Killer?.Trim();
 
                 await _context.SaveChangesAsync();
                 
@@ -311,7 +318,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpPost("{id:int}/defeat")]
-        public async Task<ActionResult<BossResponseDto>> Defeat(int id)
+        public async Task<ActionResult<BossResponseDto>> Defeat(int id, [FromBody] DefeatBossDto? dto = null)
         {
             try
             {
@@ -322,6 +329,7 @@ namespace BossHuntingSystem.Server.Controllers
                 // Use the same timezone handling as other methods for consistency
                 var currentUtc = DateTime.UtcNow;
                 existing.LastKilledAt = currentUtc;
+                existing.Killer = dto?.Killer?.Trim();
 
                 var defeat = new BossDefeat
                 {
@@ -350,7 +358,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpPost("{id:int}/add-history")]
-        public async Task<ActionResult<BossDefeat>> AddHistory(int id)
+        public async Task<ActionResult<BossDefeat>> AddHistory(int id, [FromBody] AddHistoryDto? dto = null)
         {
             Console.WriteLine($"[AddHistory] Request received for boss ID: {id}");
             
@@ -361,13 +369,33 @@ namespace BossHuntingSystem.Server.Controllers
 
                 Console.WriteLine($"[AddHistory] Creating history record for boss: {existing.Name} (ID: {existing.Id})");
 
-                // Create history record without resetting the respawn timer
-                // DefeatedAtUtc is null since this is just a history entry, not an actual defeat
+                // Create history record with custom time or current datetime
+                DateTime defeatedAtUtc;
+                
+                if (!string.IsNullOrEmpty(dto?.DefeatedAt))
+                {
+                    // Parse the custom PHT time and convert to UTC
+                    if (DateTime.TryParse(dto.DefeatedAt, out DateTime customPhtTime))
+                    {
+                        defeatedAtUtc = ConvertPhtToUtc(customPhtTime);
+                    }
+                    else
+                    {
+                        return BadRequest("Invalid DefeatedAt format");
+                    }
+                }
+                else
+                {
+                    // Use current UTC time if no custom time provided
+                    defeatedAtUtc = DateTime.UtcNow;
+                }
+                
                 var historyRecord = new BossDefeat
                 {
                     BossId = existing.Id,
                     BossName = existing.Name,
-                    DefeatedAtUtc = null, // Null because boss wasn't actually defeated
+                    DefeatedAtUtc = defeatedAtUtc,
+                    Killer = dto?.Killer?.Trim(),
                     LootsJson = "[]",
                     AttendeesJson = "[]"
                 };
@@ -375,7 +403,7 @@ namespace BossHuntingSystem.Server.Controllers
                 _context.BossDefeats.Add(historyRecord);
                 await _context.SaveChangesAsync();
 
-                Console.WriteLine($"[AddHistory] History record created successfully with ID: {historyRecord.Id}");
+                Console.WriteLine($"[AddHistory] History record created successfully with ID: {historyRecord.Id} at {defeatedAtUtc:yyyy-MM-dd HH:mm:ss} UTC");
 
                 // Add cache control headers to prevent caching
                 Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
@@ -616,6 +644,7 @@ namespace BossHuntingSystem.Server.Controllers
         public string Name { get; set; } = string.Empty;
         public int RespawnHours { get; set; }
         public string? LastKilledAt { get; set; }
+        public string? Killer { get; set; }
     }
 
     public class ManualNotificationDto
@@ -628,9 +657,10 @@ namespace BossHuntingSystem.Server.Controllers
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public int RespawnHours { get; set; }
-        public DateTime LastKilledAt { get; set; } // This will be in UTC
-        public DateTime NextRespawnAt { get; set; } // This will be in UTC
+        public DateTime LastKilledAt { get; set; } // This will be in PHT (Philippine Time)
+        public DateTime NextRespawnAt { get; set; } // This will be in PHT (Philippine Time)
         public bool IsAvailable { get; set; }
+        public string? Killer { get; set; }
     }
 
     public class AddTextDto
@@ -648,5 +678,16 @@ namespace BossHuntingSystem.Server.Controllers
     {
         public int Index { get; set; }
         public decimal? Price { get; set; }
+    }
+    
+    public class DefeatBossDto
+    {
+        public string? Killer { get; set; }
+    }
+    
+    public class AddHistoryDto
+    {
+        public string? Killer { get; set; }
+        public string? DefeatedAt { get; set; } // Optional custom defeated time in PHT
     }
 }

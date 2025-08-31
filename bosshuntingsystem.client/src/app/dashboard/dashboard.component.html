@@ -11,10 +11,14 @@
         <label class="form-label small text-muted">Respawn (hours)</label>
         <input type="number" min="1" class="form-control" [(ngModel)]="editModel.respawnHours" name="respawnHours" required>
       </div>
-      <div class="col-6 col-md-3">
+      <div class="col-6 col-md-2">
         <label class="form-label small text-muted">Last Killed At</label>
         <input type="datetime-local" class="form-control"
                [(ngModel)]="editModel.lastKilledAt" name="lastKilledAt">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small text-muted">Killed By</label>
+        <input type="text" class="form-control" [(ngModel)]="editModel.killer" name="killer" placeholder="Optional">
       </div>
       <div class="col-12 col-md-1 d-grid">
         <button type="submit" class="btn btn-primary">{{ editModel.id ? 'Update' : 'Add' }}</button>
@@ -35,7 +39,9 @@
             <th style="width:32px"></th>
             <th>Name</th>
             <th>Respawn Time</th>
+            <th>Last Killed At</th>
             <th>Next Respawn</th>
+            <th>Killed By</th>
             <th>Countdown</th>
             <th class="text-end">Actions</th>
           </tr>
@@ -45,7 +51,9 @@
             <td><span class="bullet"></span></td>
             <td class="it-title">{{ b.name }}</td>
             <td class="text-secondary">{{ b.respawnHours }} hrs</td>
-            <td class="text-secondary">{{ dateUtils.formatForDisplay(nextRespawnAt(b)) }}</td>
+            <td class="text-secondary">{{ dateUtils.formatPhtForDisplay(b.lastKilledAt) || '-' }}</td>
+            <td class="text-secondary">{{ dateUtils.formatPhtForDisplay(nextRespawnAt(b)) }}</td>
+            <td class="text-secondary">{{ b.killer || '-' }}</td>
             <td>
               <span class="badge" [ngClass]="isAvailable(b) ? 'text-bg-success' : 'text-bg-warning'">
                 {{ countdownText(b) }}
@@ -55,8 +63,9 @@
               <button class="btn btn-sm btn-success me-1" [disabled]="!isAvailable(b)" (click)="defeat(b)">Defeat</button>
               <button class="btn btn-sm btn-info me-1" 
                       (click)="addHistory(b)" 
-                      [disabled]="historyLoadingStates[b.id]">
-                {{ historyLoadingStates[b.id] ? 'Adding...' : 'History' }}
+                      [disabled]="historyLoadingStates[b.id]"
+                      title="Add defeat record with current time">
+                {{ historyLoadingStates[b.id] ? 'Adding...' : 'Add Defeat' }}
               </button>
               <button class="btn btn-sm btn-outline-secondary me-1" (click)="startEdit(b)">Edit</button>
               <button class="btn btn-sm btn-outline-danger" 
