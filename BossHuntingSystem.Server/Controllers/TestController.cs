@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using BossHuntingSystem.Server.Services;
 
 namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "Write")] // Only admins can use test endpoints
     public class TestController : ControllerBase
     {
         private readonly IDiscordNotificationService _discordService;

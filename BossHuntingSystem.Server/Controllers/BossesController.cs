@@ -4,20 +4,26 @@ using BossHuntingSystem.Server.Data;
 using BossHuntingSystem.Server.Services;
 using BossHuntingSystem.Server.Models;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authorization;
+using BossHuntingSystem.Server.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "User")] // Require authentication for all endpoints
     public class BossesController : ControllerBase
     {
         private readonly BossHuntingDbContext _context;
         private readonly IDiscordNotificationService _discordService;
+        private readonly ILogger<BossesController> _logger;
 
-        public BossesController(BossHuntingDbContext context, IDiscordNotificationService discordService)
+        public BossesController(BossHuntingDbContext context, IDiscordNotificationService discordService, ILogger<BossesController> logger)
         {
             _context = context;
             _discordService = discordService;
+            _logger = logger;
         }
 
         // Philippine Time Zone
@@ -68,6 +74,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "ReadOnly")] // Require authentication to view bosses
         public async Task<ActionResult<IEnumerable<BossResponseDto>>> GetAll()
         {
             try
@@ -95,6 +102,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("history")]
+        [Authorize(Policy = "ReadOnly")] // Require authentication to view history
         public async Task<ActionResult<IEnumerable<BossDefeat>>> GetHistory()
         {
             try
@@ -119,6 +127,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("history/{id:int}")]
+        [Authorize(Policy = "ReadOnly")] // Require authentication for individual history records
         public async Task<ActionResult<BossDefeat>> GetHistoryById(int id)
         {
             try
@@ -141,6 +150,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [Authorize(Policy = "ReadOnly")] // Require authentication for individual boss details
         public async Task<ActionResult<BossResponseDto>> GetById(int id)
         {
             try
@@ -163,6 +173,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "BossManagement")] // Only admins can create bosses
         public async Task<ActionResult<BossResponseDto>> Create([FromBody] BossCreateUpdateDto dto)
         {
             Console.WriteLine($"[Create] Received request: Name='{dto?.Name}', RespawnHours={dto?.RespawnHours}, LastKilledAt='{dto?.LastKilledAt}'");
@@ -236,6 +247,7 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = "BossManagement")] // Only admins can update bosses
         public async Task<ActionResult<BossResponseDto>> Update(int id, [FromBody] BossCreateUpdateDto dto)
         {
             if (dto == null) return BadRequest("Request body is required");
@@ -290,40 +302,49 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = "BossManagement")] // Only admins can delete bosses
         public async Task<IActionResult> Delete(int id)
         {
-            Console.WriteLine($"[BossesController] DELETE request received for ID: {id}");
-            Console.WriteLine($"[BossesController] Request Headers: {string.Join(", ", Request.Headers.Select(h => $"{h.Key}:{h.Value}"))}");
+            var username = User.GetUsername();
+            _logger.LogInformation("User {Username} attempting to delete boss {Id}", username, id);
 
             try
             {
                 var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null)
                 {
-                    Console.WriteLine($"[BossesController] Boss with ID {id} not found");
+                    _logger.LogWarning("User {Username} attempted to delete non-existent boss {Id}", username, id);
                     return NotFound();
                 }
 
                 _context.Bosses.Remove(existing);
                 await _context.SaveChangesAsync();
 
-                Console.WriteLine($"[BossesController] Boss with ID {id} deleted successfully");
+                _logger.LogInformation("User {Username} successfully deleted boss {Id} with name {Name}", username, id, existing.Name);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Delete] Error: {ex.Message}");
+                _logger.LogError(ex, "User {Username} failed to delete boss {Id}", username, id);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("{id:int}/defeat")]
+        [Authorize(Policy = "BossManagement")] // Only admins can record boss defeats
         public async Task<ActionResult<BossResponseDto>> Defeat(int id, [FromBody] DefeatBossDto? dto = null)
         {
+            var username = User.GetUsername();
+            _logger.LogInformation("User {Username} attempting to record defeat for boss {Id}", username, id);
+
             try
             {
                 var existing = await _context.Bosses.FindAsync(id);
-                if (existing == null) return NotFound();
+                if (existing == null) 
+                {
+                    _logger.LogWarning("User {Username} attempted to record defeat for non-existent boss {Id}", username, id);
+                    return NotFound();
+                }
 
                 // When a boss is defeated, we set the last kill time to now (UTC)
                 // Use the same timezone handling as other methods for consistency
@@ -343,6 +364,8 @@ namespace BossHuntingSystem.Server.Controllers
                 _context.BossDefeats.Add(defeat);
                 await _context.SaveChangesAsync();
 
+                _logger.LogInformation("User {Username} successfully recorded defeat for boss {Id} with name {Name}", username, id, existing.Name);
+
                 // Add cache control headers to prevent caching
                 Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
                 Response.Headers["Pragma"] = "no-cache";
@@ -352,7 +375,7 @@ namespace BossHuntingSystem.Server.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Defeat] Error: {ex.Message}");
+                _logger.LogError(ex, "User {Username} failed to record defeat for boss {Id}", username, id);
                 return StatusCode(500, "Database error occurred");
             }
         }
@@ -585,52 +608,58 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpDelete("history/{id:int}")]
+        [Authorize(Policy = "BossManagement")] // Only admins can delete history records
         public async Task<IActionResult> DeleteHistory(int id)
         {
+            var username = User.GetUsername();
+            _logger.LogInformation("User {Username} attempting to delete boss history record {Id}", username, id);
+
             try
             {
                 var record = await _context.BossDefeats.FindAsync(id);
-                if (record == null) return NotFound();
+                if (record == null)
+                {
+                    _logger.LogWarning("User {Username} attempted to delete non-existent boss history record {Id}", username, id);
+                    return NotFound();
+                }
 
                 _context.BossDefeats.Remove(record);
                 await _context.SaveChangesAsync();
-                
-                // Add cache control headers to prevent caching
-                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-                Response.Headers["Pragma"] = "no-cache";
-                Response.Headers["Expires"] = "0";
-                
+
+                _logger.LogInformation("User {Username} successfully deleted boss history record {Id}", username, id);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DeleteHistory] Error: {ex.Message}");
+                _logger.LogError(ex, "User {Username} failed to delete boss history record {Id}", username, id);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("notify")]
+        [Authorize(Policy = "Notifications")] // Only admins can send manual notifications
         public async Task<IActionResult> SendManualNotification([FromBody] ManualNotificationDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.Message))
+            var username = User.GetUsername();
+            _logger.LogInformation("User {Username} attempting to send manual notification for boss {BossName}", username, dto?.BossName);
+
+            if (dto == null || string.IsNullOrWhiteSpace(dto.BossName))
             {
-                return BadRequest("Message is required");
+                _logger.LogWarning("User {Username} attempted to send manual notification with invalid data", username);
+                return BadRequest("Boss name is required");
             }
 
             try
             {
-                await _discordService.SendManualNotificationAsync(dto.Message);
+                await _discordService.SendBossNotificationAsync(dto.BossName, dto.MinutesUntilRespawn ?? 5);
                 
-                // Add cache control headers to prevent caching
-                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-                Response.Headers["Pragma"] = "no-cache";
-                Response.Headers["Expires"] = "0";
+                _logger.LogInformation("User {Username} successfully sent manual notification for boss {BossName}", username, dto.BossName);
                 
-                return Ok(new { success = true, message = "Notification sent successfully" });
+                return Ok(new { message = "Notification sent successfully" });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SendManualNotification] Error: {ex.Message}");
+                _logger.LogError(ex, "User {Username} failed to send manual notification for boss {BossName}", username, dto.BossName);
                 return StatusCode(500, "Failed to send notification");
             }
         }
@@ -649,7 +678,8 @@ namespace BossHuntingSystem.Server.Controllers
 
     public class ManualNotificationDto
     {
-        public string Message { get; set; } = string.Empty;
+        public string BossName { get; set; } = string.Empty;
+        public int? MinutesUntilRespawn { get; set; }
     }
 
     public class BossResponseDto

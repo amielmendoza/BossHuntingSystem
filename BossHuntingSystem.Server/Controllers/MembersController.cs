@@ -1,21 +1,28 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using BossHuntingSystem.Server.Data;
+using BossHuntingSystem.Server.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "User")] // Require authentication for all endpoints
     public class MembersController : ControllerBase
     {
         private readonly BossHuntingDbContext _context;
+        private readonly ILogger<MembersController> _logger;
 
-        public MembersController(BossHuntingDbContext context)
+        public MembersController(BossHuntingDbContext context, ILogger<MembersController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         [HttpGet]
+        [Authorize(Policy = "ReadOnly")] // Require authentication to view members
         public async Task<ActionResult<IEnumerable<MemberDto>>> GetAll()
         {
             try
@@ -23,16 +30,16 @@ namespace BossHuntingSystem.Server.Controllers
                 var members = await _context.Members
                     .OrderByDescending(m => m.CombatPower)
                     .ThenBy(m => m.Name)
-                                         .Select(m => new MemberDto
-                     {
-                         Id = m.Id,
-                         Name = m.Name,
-                         CombatPower = m.CombatPower,
-                         GcashNumber = m.GcashNumber,
-                         GcashName = m.GcashName,
-                         CreatedAtUtc = m.CreatedAtUtc,
-                         UpdatedAtUtc = m.UpdatedAtUtc
-                     })
+                    .Select(m => new MemberDto
+                    {
+                        Id = m.Id,
+                        Name = m.Name,
+                        CombatPower = m.CombatPower,
+                        GcashNumber = m.GcashNumber,
+                        GcashName = m.GcashName,
+                        CreatedAtUtc = m.CreatedAtUtc,
+                        UpdatedAtUtc = m.UpdatedAtUtc
+                    })
                     .ToListAsync();
                 
                 // Add cache control headers to prevent caching
@@ -44,12 +51,13 @@ namespace BossHuntingSystem.Server.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetAll] Error: {ex.Message}");
+                _logger.LogError(ex, "[GetAll] Error retrieving members");
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpGet("{id:int}")]
+        [Authorize(Policy = "ReadOnly")] // Require authentication to view individual members
         public async Task<ActionResult<MemberDto>> GetById(int id)
         {
             try
@@ -77,24 +85,45 @@ namespace BossHuntingSystem.Server.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GetById] Error: {ex.Message}");
+                _logger.LogError(ex, "[GetById] Error retrieving member {Id}", id);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost]
+        [Authorize(Policy = "MemberManagement")] // Only admins can create members
         public async Task<ActionResult<MemberDto>> Create([FromBody] CreateUpdateMemberDto dto)
         {
-            if (dto == null) return BadRequest("Request body is required");
-            if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required");
-            if (dto.CombatPower < 0) return BadRequest("Combat power must be non-negative");
+            var username = User.GetUsername();
+            _logger.LogInformation("User {Username} attempting to create member: {Name}", username, dto?.Name);
+
+            if (dto == null) 
+            {
+                _logger.LogWarning("User {Username} attempted to create member with null request body", username);
+                return BadRequest("Request body is required");
+            }
+            
+            if (string.IsNullOrWhiteSpace(dto.Name)) 
+            {
+                _logger.LogWarning("User {Username} attempted to create member with empty name", username);
+                return BadRequest("Name is required");
+            }
+            
+            if (dto.CombatPower < 0) 
+            {
+                _logger.LogWarning("User {Username} attempted to create member with invalid combat power: {CombatPower}", username, dto.CombatPower);
+                return BadRequest("Combat power must be non-negative");
+            }
 
             try
             {
                 // Check if member with same name already exists
-                var existingMember = await _context.Members.FirstOrDefaultAsync(m => m.Name.ToLower() == dto.Name.ToLower());
+                var existingMember = await _context.Members
+                    .FirstOrDefaultAsync(m => m.Name.ToLower() == dto.Name.ToLower());
+                
                 if (existingMember != null)
                 {
+                    _logger.LogWarning("User {Username} attempted to create member with duplicate name: {Name}", username, dto.Name);
                     return BadRequest($"Member with name '{dto.Name}' already exists");
                 }
 
@@ -111,6 +140,8 @@ namespace BossHuntingSystem.Server.Controllers
                 _context.Members.Add(member);
                 await _context.SaveChangesAsync();
 
+                _logger.LogInformation("User {Username} successfully created member {Id} with name {Name}", username, member.Id, member.Name);
+
                 var responseDto = new MemberDto
                 {
                     Id = member.Id,
@@ -121,100 +152,118 @@ namespace BossHuntingSystem.Server.Controllers
                     CreatedAtUtc = member.CreatedAtUtc,
                     UpdatedAtUtc = member.UpdatedAtUtc
                 };
-                
-                // Add cache control headers to prevent caching
-                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-                Response.Headers["Pragma"] = "no-cache";
-                Response.Headers["Expires"] = "0";
-                
+
                 return CreatedAtAction(nameof(GetById), new { id = member.Id }, responseDto);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Create] Error: {ex.Message}");
+                _logger.LogError(ex, "User {Username} failed to create member {Name}", username, dto.Name);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = "MemberManagement")] // Only admins can update members
         public async Task<ActionResult<MemberDto>> Update(int id, [FromBody] CreateUpdateMemberDto dto)
         {
-            if (dto == null) return BadRequest("Request body is required");
-            if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required");
-            if (dto.CombatPower < 0) return BadRequest("Combat power must be non-negative");
+            var username = User.GetUsername();
+            _logger.LogInformation("User {Username} attempting to update member {Id}", username, id);
+
+            if (dto == null) 
+            {
+                _logger.LogWarning("User {Username} attempted to update member {Id} with null request body", username, id);
+                return BadRequest("Request body is required");
+            }
+            
+            if (string.IsNullOrWhiteSpace(dto.Name)) 
+            {
+                _logger.LogWarning("User {Username} attempted to update member {Id} with empty name", username, id);
+                return BadRequest("Name is required");
+            }
+            
+            if (dto.CombatPower < 0) 
+            {
+                _logger.LogWarning("User {Username} attempted to update member {Id} with invalid combat power: {CombatPower}", username, id, dto.CombatPower);
+                return BadRequest("Combat power must be non-negative");
+            }
 
             try
             {
-                var existingMember = await _context.Members.FindAsync(id);
-                if (existingMember == null) return NotFound();
-
-                // Check if another member with the same name exists (excluding current member)
-                var duplicateMember = await _context.Members.FirstOrDefaultAsync(m => 
-                    m.Name.ToLower() == dto.Name.ToLower() && m.Id != id);
-                if (duplicateMember != null)
+                var existing = await _context.Members.FindAsync(id);
+                if (existing == null)
                 {
-                    return BadRequest($"Member with name '{dto.Name}' already exists");
+                    _logger.LogWarning("User {Username} attempted to update non-existent member {Id}", username, id);
+                    return NotFound();
                 }
 
-                existingMember.Name = dto.Name.Trim();
-                existingMember.CombatPower = dto.CombatPower;
-                existingMember.GcashNumber = dto.GcashNumber?.Trim();
-                existingMember.GcashName = dto.GcashName?.Trim();
-                existingMember.UpdatedAtUtc = DateTime.UtcNow;
+                // Check if another member with the same name exists (excluding current member)
+                var duplicateMember = await _context.Members
+                    .FirstOrDefaultAsync(m => m.Id != id && m.Name.ToLower() == dto.Name.ToLower());
+                
+                if (duplicateMember != null)
+                {
+                    _logger.LogWarning("User {Username} attempted to update member {Id} with duplicate name: {Name}", username, id, dto.Name);
+                    return BadRequest($"Another member with name '{dto.Name}' already exists");
+                }
+
+                existing.Name = dto.Name.Trim();
+                existing.CombatPower = dto.CombatPower;
+                existing.GcashNumber = dto.GcashNumber?.Trim();
+                existing.GcashName = dto.GcashName?.Trim();
+                existing.UpdatedAtUtc = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
+                _logger.LogInformation("User {Username} successfully updated member {Id}", username, id);
+
                 var responseDto = new MemberDto
                 {
-                    Id = existingMember.Id,
-                    Name = existingMember.Name,
-                    CombatPower = existingMember.CombatPower,
-                    GcashNumber = existingMember.GcashNumber,
-                    GcashName = existingMember.GcashName,
-                    CreatedAtUtc = existingMember.CreatedAtUtc,
-                    UpdatedAtUtc = existingMember.UpdatedAtUtc
+                    Id = existing.Id,
+                    Name = existing.Name,
+                    CombatPower = existing.CombatPower,
+                    GcashNumber = existing.GcashNumber,
+                    GcashName = existing.GcashName,
+                    CreatedAtUtc = existing.CreatedAtUtc,
+                    UpdatedAtUtc = existing.UpdatedAtUtc
                 };
-                
-                // Add cache control headers to prevent caching
-                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-                Response.Headers["Pragma"] = "no-cache";
-                Response.Headers["Expires"] = "0";
-                
+
                 return Ok(responseDto);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Update] Error: {ex.Message}");
+                _logger.LogError(ex, "User {Username} failed to update member {Id}", username, id);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = "MemberManagement")] // Only admins can delete members
         public async Task<IActionResult> Delete(int id)
         {
+            var username = User.GetUsername();
+            _logger.LogInformation("User {Username} attempting to delete member {Id}", username, id);
+
             try
             {
-                var member = await _context.Members.FindAsync(id);
-                if (member == null) return NotFound();
+                var existing = await _context.Members.FindAsync(id);
+                if (existing == null)
+                {
+                    _logger.LogWarning("User {Username} attempted to delete non-existent member {Id}", username, id);
+                    return NotFound();
+                }
 
-                _context.Members.Remove(member);
+                _context.Members.Remove(existing);
                 await _context.SaveChangesAsync();
-                
-                // Add cache control headers to prevent caching
-                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-                Response.Headers["Pragma"] = "no-cache";
-                Response.Headers["Expires"] = "0";
-                
+
+                _logger.LogInformation("User {Username} successfully deleted member {Id} with name {Name}", username, id, existing.Name);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Delete] Error: {ex.Message}");
+                _logger.LogError(ex, "User {Username} failed to delete member {Id}", username, id);
                 return StatusCode(500, "Database error occurred");
             }
         }
-
-
     }
 
     // DTOs

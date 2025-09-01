@@ -1,4 +1,5 @@
 using BossHuntingSystem.Server.Models;
+using System.Security.Claims;
 
 namespace BossHuntingSystem.Server.Services
 {
@@ -6,6 +7,6 @@ namespace BossHuntingSystem.Server.Services
     {
         Task<LoginResponse> AuthenticateAsync(LoginRequest request);
         bool ValidateToken(string token);
-        string GenerateToken(string username);
+        ClaimsPrincipal? GetUserFromToken(string token);
     }
 }
