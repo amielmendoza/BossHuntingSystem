@@ -22,7 +22,9 @@ builder.Services.AddCors(options =>
                     "https://localhost:53931",
                     "https://127.0.0.1:53931",
                     "https://localhost:7294",
-                    "https://127.0.0.1:7294")
+                    "https://127.0.0.1:7294",
+                    "http://localhost:5077",
+                    "http://127.0.0.1:5077")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         }
@@ -46,6 +48,9 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<IDiscordNotificationService, DiscordNotificationService>();
 builder.Services.AddSingleton<IBossNotificationTracker, BossNotificationTracker>();
 builder.Services.AddHostedService<BossNotificationBackgroundService>();
+
+// Authentication services
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 
 

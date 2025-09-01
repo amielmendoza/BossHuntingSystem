@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { BossService } from './boss.service';
+import { AuthService } from './services/auth.service';
 
 type Menu = {
   isOpen: boolean;
@@ -19,8 +20,14 @@ type Name = {
 export class AppComponent implements OnInit {
   public menu: Menu = { isOpen: false };
   public name: Name = { route: '' };
+  public isAuthenticated = false;
+  public currentUser: string | null = null;
 
-  constructor(private router: Router, private bossService: BossService) {}
+  constructor(
+    private router: Router, 
+    private bossService: BossService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     console.log('[BossHunt] AppComponent init');
@@ -31,6 +38,19 @@ export class AppComponent implements OnInit {
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {
       this.updateRouteName();
+    });
+
+    // Subscribe to authentication state
+    this.authService.isAuthenticated$.subscribe(isAuth => {
+      this.isAuthenticated = isAuth;
+      // Redirect to login if not authenticated and not already on login page
+      if (!isAuth && this.router.url !== '/login') {
+        this.router.navigate(['/login']);
+      }
+    });
+
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
     });
   }
 
@@ -52,5 +72,10 @@ export class AppComponent implements OnInit {
 
   openMenu(): void {
     this.menu.isOpen = !this.menu.isOpen;
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 }

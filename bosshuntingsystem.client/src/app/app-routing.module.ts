@@ -5,14 +5,17 @@ import { NotificationsComponent } from './notifications/notifications.component'
 import { MembersComponent } from './members/members.component';
 import { JaeComponent } from './jae/jae.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { LoginComponent } from './login/login.component';
+import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
-  { path: '', redirectTo: '/dashboard', pathMatch: 'full' }, // Redirect root to dashboard
-  { path: 'dashboard', component: DashboardComponent }, // Dashboard route with component
-  { path: 'history', component: HistoryComponent },
-  { path: 'notifications', component: NotificationsComponent },
-  { path: 'members', component: MembersComponent },
-  { path: 'jae', component: JaeComponent },
+  { path: 'login', component: LoginComponent },
+  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
+  { path: 'history', component: HistoryComponent, canActivate: [AuthGuard] },
+  { path: 'notifications', component: NotificationsComponent, canActivate: [AuthGuard] },
+  { path: 'members', component: MembersComponent, canActivate: [AuthGuard] },
+  { path: 'jae', component: JaeComponent, canActivate: [AuthGuard] },
   { path: '**', redirectTo: '/dashboard' }
 ];
 

@@ -37,7 +37,10 @@
             "styles": [
               "src/styles.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "tesseract.js"
+            ]
           },
           "configurations": {
             "production": {

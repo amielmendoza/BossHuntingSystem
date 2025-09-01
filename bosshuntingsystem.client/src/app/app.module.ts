@@ -2,7 +2,7 @@ import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
@@ -13,8 +13,10 @@ import { NotificationsComponent } from './notifications/notifications.component'
 import { MembersComponent } from './members/members.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { CacheInterceptor } from './cache-interceptor';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { JaeComponent } from './jae/jae.component';
 import { DateUtilsService } from './utils/date-utils.service';
+import { LoginComponent } from './login/login.component';
 
 @NgModule({
   declarations: [
@@ -23,16 +25,22 @@ import { DateUtilsService } from './utils/date-utils.service';
     NotificationsComponent,
     MembersComponent,
     DashboardComponent,
-    JaeComponent
+    JaeComponent,
+    LoginComponent
   ],
   imports: [
-    BrowserModule, CommonModule, HttpClientModule, FormsModule, RouterModule,
+    BrowserModule, CommonModule, HttpClientModule, FormsModule, ReactiveFormsModule, RouterModule,
     AppRoutingModule, NgbModule
   ],
   providers: [
     {
       provide: HTTP_INTERCEPTORS,
       useClass: CacheInterceptor,
+      multi: true
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AuthInterceptor,
       multi: true
     },
     DateUtilsService

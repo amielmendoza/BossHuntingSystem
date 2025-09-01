@@ -69,7 +69,7 @@ export interface AddHistoryDto {
 
 @Injectable({ providedIn: 'root' })
 export class BossService {
-  private apiBase: string = environment.apiBaseUrl;
+  private apiBase: string = environment.apiUrl;
   private historyUpdated = new Subject<void>();
   historyUpdated$ = this.historyUpdated.asObservable();
 

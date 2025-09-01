@@ -1,6 +1,5 @@
-﻿<div class="d-flex p-2 gap-2 w-full vh-100">
-
-
+﻿<!-- Show main app when authenticated -->
+<div class="d-flex p-2 gap-2 w-full vh-100" *ngIf="isAuthenticated">
   <!-- Left Sidebar (kept minimal) -->
   <aside class="sidebar d-none d-md-block w-10 h-100" [ngClass]="{'w-auto': menu.isOpen}">
     <div class="brand">
@@ -27,8 +26,6 @@
         <span [ngClass]="{'d-none': menu.isOpen}">Notifications</span>
       </a>
     </div>
-    
-
   </aside>
 
   <!-- Main Content -->
@@ -36,11 +33,21 @@
     <div class="topbar w-100">
       <div class="d-flex align-items-center gap-2">
         <h5 class="mb-0">{{name.route}}</h5>
-
+        <div class="ms-auto d-flex align-items-center gap-3">
+          <span class="text-muted">Welcome, {{currentUser}}</span>
+          <button class="btn btn-outline-danger btn-sm" (click)="logout()">
+            <i class="bi bi-box-arrow-right"></i> Logout
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Route outlet for all pages -->
     <router-outlet></router-outlet>
   </section>
+</div>
+
+<!-- Show login page when not authenticated -->
+<div *ngIf="!isAuthenticated">
+  <router-outlet></router-outlet>
 </div>
