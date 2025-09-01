@@ -2,8 +2,13 @@
 
   
   <div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="fw-semibold">Defeat History</div>
-    <div class="small text-muted">Most recent first</div>
+    <div>
+      <div class="fw-semibold">Defeat History</div>
+      <div class="small text-muted">Most recent first</div>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" (click)="refreshHistory()" title="Refresh history data">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
   </div>
   <div *ngIf="loading" class="text-muted">Loading…</div>
   <div class="table-responsive" *ngIf="!loading">

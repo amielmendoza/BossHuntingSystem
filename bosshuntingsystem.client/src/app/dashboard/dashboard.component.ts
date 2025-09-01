@@ -97,6 +97,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  public refreshBosses(): void {
+    console.log('[BossHunt] Manual refresh requested');
+    this.loadBosses();
+  }
+
   // CRUD actions
   public editModel: { id?: number; name: string; respawnHours: number; lastKilledAt: string; killer?: string } =
     { name: '', respawnHours: 1, lastKilledAt: '', killer: '' };

@@ -29,8 +29,13 @@
   <!-- Boss Hunting System: Boss List -->
   <div class="cardx span-12">
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <div class="fw-semibold">Boss Monsters</div>
-      <div class="small text-muted">Name, Respawn, Countdown</div>
+      <div>
+        <div class="fw-semibold">Boss Monsters</div>
+        <div class="small text-muted">Name, Respawn, Countdown</div>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" (click)="refreshBosses()" title="Refresh boss data">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
     </div>
     <div class="table-responsive">
       <table class="table align-middle mb-0">

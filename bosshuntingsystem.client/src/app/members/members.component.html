@@ -29,8 +29,13 @@
       <div class="card" *ngIf="!loading">
         <div class="card-header">
           <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Members List</h5>
-            <span class="badge bg-primary">{{ members.length }} members</span>
+            <div>
+              <h5 class="mb-0">Members List</h5>
+              <span class="badge bg-primary">{{ members.length }} members</span>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" (click)="refreshMembers()" title="Refresh members data">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
           </div>
         </div>
         <div class="card-body p-0">

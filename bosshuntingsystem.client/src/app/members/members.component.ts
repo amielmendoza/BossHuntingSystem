@@ -58,6 +58,11 @@ export class MembersComponent implements OnInit {
     });
   }
 
+  public refreshMembers(): void {
+    console.log('[Members] Manual refresh requested');
+    this.loadMembers();
+  }
+
   openCreateModal(): void {
     this.createForm = {
       name: '',

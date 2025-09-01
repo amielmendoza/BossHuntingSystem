@@ -43,6 +43,15 @@ export class HistoryComponent implements OnInit, OnDestroy {
     this.sub = this.bossApi.historyUpdated$.subscribe(() => load());
   }
 
+  public refreshHistory(): void {
+    console.log('[History] Manual refresh requested');
+    this.loading = true;
+    this.bossApi.history().subscribe({
+      next: r => { this.rows = r; this.loading = false; },
+      error: e => { console.error('Failed to load history', e); this.loading = false; }
+    });
+  }
+
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
   }
