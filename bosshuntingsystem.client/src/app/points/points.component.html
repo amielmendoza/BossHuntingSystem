@@ -1,0 +1,66 @@
+<div class="cardx span-12">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+      <div class="fw-semibold">Member Points System</div>
+      <div class="small text-muted">Points earned from boss battle attendance</div>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" (click)="refreshPoints()" title="Refresh points data">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="text-muted">Loading points...</div>
+  
+  <div class="table-responsive" *ngIf="!loading">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:50px">#</th>
+          <th>Member Name</th>
+          <th>Total Points</th>
+          <th>Bosses Attended</th>
+          <th>Rank</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let member of memberPoints; let i = index">
+          <td class="text-muted">{{ i + 1 }}</td>
+          <td class="it-title">{{ member.memberName }}</td>
+          <td>
+            <span class="badge text-bg-primary">{{ member.points }}</span>
+          </td>
+          <td class="text-secondary">{{ member.bossesAttended }}</td>
+          <td>
+            <span class="badge" 
+                  [ngClass]="{
+                    'text-bg-warning': i === 0,
+                    'text-bg-secondary': i === 1,
+                    'text-bg-light text-dark': i === 2,
+                    'text-bg-outline-secondary': i > 2
+                  }">
+              <ng-container *ngIf="i === 0">🥇 1st</ng-container>
+              <ng-container *ngIf="i === 1">🥈 2nd</ng-container>
+              <ng-container *ngIf="i === 2">🥉 3rd</ng-container>
+              <ng-container *ngIf="i > 2">{{ i + 1 }}th</ng-container>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <div class="text-muted small mt-2" *ngIf="memberPoints.length === 0">
+      No attendance records found. Points are earned by attending boss battles.
+    </div>
+  </div>
+
+  <!-- Points Information Card -->
+  <div class="mt-4 p-3 border rounded bg-light">
+    <h6 class="mb-2">How Points Work</h6>
+    <ul class="small mb-0">
+      <li>Each boss battle attendance earns 1 point</li>
+      <li>Points are calculated from the attendance records in boss battle history</li>
+      <li>Rankings are updated automatically when new battles are recorded</li>
+      <li>Members are ranked by total points, then alphabetically by name</li>
+    </ul>
+  </div>
+</div>

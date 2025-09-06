@@ -1,0 +1,39 @@
+/* Points Component Styles */
+.it-title {
+  font-weight: 500;
+}
+
+.badge {
+  font-size: 0.875rem;
+}
+
+.text-bg-outline-secondary {
+  background-color: transparent !important;
+  border: 1px solid #6c757d;
+  color: #6c757d !important;
+}
+
+.table th {
+  border-top: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+/* Rank badges */
+.badge:has(.fa-trophy) {
+  font-size: 1rem;
+}
+
+/* Loading state */
+.text-muted {
+  font-style: italic;
+}
+
+/* Information card */
+.bg-light {
+  background-color: #f8f9fa !important;
+}

@@ -63,6 +63,12 @@ export interface AddHistoryDto {
   owner?: string;
 }
 
+export interface MemberPointsDto {
+  memberName: string;
+  points: number;
+  bossesAttended: number;
+}
+
 
 
 
@@ -173,6 +179,11 @@ export class BossService {
 
   sendManualNotification(message: string): Observable<any> {
     return this.http.post(this.url('/api/bosses/notify'), { message });
+  }
+
+  // Get member points from attendance tracking
+  getMemberPoints(): Observable<MemberPointsDto[]> {
+    return this.http.get<MemberPointsDto[]>(this.url('/api/bosses/points'));
   }
 
 

@@ -5,7 +5,9 @@
       "Bash(dotnet ef migrations:*)",
       "Bash(dotnet tool restore:*)",
       "Bash(dotnet ef database:*)",
-      "Bash(dotnet build)"
+      "Bash(dotnet build)",
+      "Bash(ng generate:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

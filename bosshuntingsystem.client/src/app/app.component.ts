@@ -69,6 +69,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.name.route = 'History';
     } else if (currentRoute === '/members') {
       this.name.route = 'Members';
+    } else if (currentRoute === '/points') {
+      this.name.route = 'Points';
     } else if (currentRoute === '/notifications') {
       this.name.route = 'Notifications';
     } else {
@@ -83,7 +85,7 @@ export class AppComponent implements OnInit, OnDestroy {
   // Check if current route requires admin access
   isRestrictedRoute(): boolean {
     const currentRoute = this.router.url;
-    const restrictedRoutes = ['/history', '/members', '/notifications'];
+    const restrictedRoutes = ['/history', '/members', '/points', '/notifications'];
     return restrictedRoutes.some(route => currentRoute.startsWith(route));
   }
 }

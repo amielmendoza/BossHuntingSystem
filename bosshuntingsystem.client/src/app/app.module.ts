@@ -12,6 +12,7 @@ import { HistoryComponent } from './history/history.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MembersComponent } from './members/members.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { PointsComponent } from './points/points.component';
 import { CacheInterceptor } from './cache-interceptor';
 import { JaeComponent } from './jae/jae.component';
 import { DateUtilsService } from './utils/date-utils.service';
@@ -23,6 +24,7 @@ import { DateUtilsService } from './utils/date-utils.service';
     NotificationsComponent,
     MembersComponent,
     DashboardComponent,
+    PointsComponent,
     JaeComponent
   ],
   imports: [

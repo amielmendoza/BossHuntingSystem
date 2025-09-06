@@ -647,6 +647,56 @@ namespace BossHuntingSystem.Server.Controllers
             }
         }
 
+        [HttpGet("points")]
+        public async Task<ActionResult<IEnumerable<MemberPointsDto>>> GetMemberPoints()
+        {
+            try
+            {
+                // Get all boss defeats with attendance data
+                var defeats = await _context.BossDefeats.ToListAsync();
+                
+                // Dictionary to track points for each member
+                var memberPoints = new Dictionary<string, int>();
+                
+                foreach (var defeat in defeats)
+                {
+                    foreach (var attendee in defeat.Attendees)
+                    {
+                        if (!string.IsNullOrWhiteSpace(attendee))
+                        {
+                            if (memberPoints.ContainsKey(attendee))
+                            {
+                                memberPoints[attendee]++;
+                            }
+                            else
+                            {
+                                memberPoints[attendee] = 1;
+                            }
+                        }
+                    }
+                }
+                
+                // Convert to DTO and sort by points descending
+                var result = memberPoints
+                    .Select(kvp => new MemberPointsDto
+                    {
+                        MemberName = kvp.Key,
+                        Points = kvp.Value,
+                        BossesAttended = kvp.Value // Each boss battle attendance = 1 point
+                    })
+                    .OrderByDescending(mp => mp.Points)
+                    .ThenBy(mp => mp.MemberName)
+                    .ToList();
+                
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting member points");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
 
     }
 
@@ -702,5 +752,12 @@ namespace BossHuntingSystem.Server.Controllers
     {
         public string? Owner { get; set; }
         public string? DefeatedAt { get; set; } // Optional custom defeated time in PHT
+    }
+    
+    public class MemberPointsDto
+    {
+        public string MemberName { get; set; } = string.Empty;
+        public int Points { get; set; }
+        public int BossesAttended { get; set; }
     }
 }
