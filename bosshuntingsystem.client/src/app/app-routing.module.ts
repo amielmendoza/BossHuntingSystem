@@ -5,38 +5,15 @@ import { NotificationsComponent } from './notifications/notifications.component'
 import { MembersComponent } from './members/members.component';
 import { JaeComponent } from './jae/jae.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
-import { LoginComponent } from './login/login.component';
-import { AuthGuard } from './guards/auth.guard';
-import { EmergencyAuthGuard } from './guards/emergency-auth.guard';
+import { AdminAccessGuard } from './guards/admin-access.guard';
 
 const routes: Routes = [
-  { path: 'login', component: LoginComponent },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-  { 
-    path: 'dashboard', 
-    component: DashboardComponent, 
-    canActivate: [EmergencyAuthGuard, AuthGuard] 
-  },
-  { 
-    path: 'history', 
-    component: HistoryComponent, 
-    canActivate: [EmergencyAuthGuard, AuthGuard] 
-  },
-  { 
-    path: 'notifications', 
-    component: NotificationsComponent, 
-    canActivate: [EmergencyAuthGuard, AuthGuard] 
-  },
-  { 
-    path: 'members', 
-    component: MembersComponent, 
-    canActivate: [EmergencyAuthGuard, AuthGuard] 
-  },
-  { 
-    path: 'jae', 
-    component: JaeComponent, 
-    canActivate: [EmergencyAuthGuard, AuthGuard] 
-  },
+  { path: 'dashboard', component: DashboardComponent },
+  { path: 'history', component: HistoryComponent, canActivate: [AdminAccessGuard] },
+  { path: 'notifications', component: NotificationsComponent, canActivate: [AdminAccessGuard] },
+  { path: 'members', component: MembersComponent, canActivate: [AdminAccessGuard] },
+  { path: 'jae', component: JaeComponent, canActivate: [AdminAccessGuard] },
   { path: '**', redirectTo: '/dashboard' }
 ];
 

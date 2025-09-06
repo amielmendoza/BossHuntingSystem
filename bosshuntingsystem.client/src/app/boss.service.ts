@@ -11,14 +11,14 @@ export interface BossDto {
   lastKilledAt: string; // PHT (Philippine Time) from server
   nextRespawnAt: string; // PHT (Philippine Time) from server
   isAvailable: boolean;
-  killer?: string;
+  owner?: string;
 }
 
 export interface BossCreateUpdateDto {
   name: string;
   respawnHours: number;
   lastKilledAt: string | null;
-  killer?: string;
+  owner?: string;
 }
 
 export interface LootItemDto {
@@ -32,7 +32,7 @@ export interface BossDefeatDto {
   bossName: string;
   combatPower: string[];
   defeatedAtUtc: string | null; // ISO date string from server, null for history entries
-  killer?: string;
+  owner?: string;
   loots: string[];
   attendees: string[];
   lootItems?: LootItemDto[]; // New property for loot with prices
@@ -56,11 +56,11 @@ export interface CreateUpdateMemberDto {
 }
 
 export interface DefeatBossDto {
-  killer?: string;
+  owner?: string;
 }
 
 export interface AddHistoryDto {
-  killer?: string;
+  owner?: string;
 }
 
 
@@ -93,12 +93,12 @@ export class BossService {
   getById(id: number): Observable<BossDto> { return this.http.get<BossDto>(this.url(`/api/bosses/${id}`)); }
   create(payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.post<BossDto>(this.url('/api/bosses'), payload); }
   update(id: number, payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.put<BossDto>(this.url(`/api/bosses/${id}`), payload); }
-  defeat(id: number, killer?: string): Observable<BossDto> {
-    const payload = killer ? { killer } : {};
+  defeat(id: number, owner?: string): Observable<BossDto> {
+    const payload = owner ? { owner } : {};
     return this.http.post<BossDto>(this.url(`/api/bosses/${id}/defeat`), payload)
       .pipe(tap(() => this.historyUpdated.next()));
   }
-  addHistory(id: number, payload?: { killer?: string; defeatedAt?: string }): Observable<BossDefeatDto> {
+  addHistory(id: number, payload?: { owner?: string; defeatedAt?: string }): Observable<BossDefeatDto> {
     const requestPayload = payload || {};
     return this.http.post<BossDefeatDto>(this.url(`/api/bosses/${id}/add-history`), requestPayload)
       .pipe(tap(() => this.historyUpdated.next()));

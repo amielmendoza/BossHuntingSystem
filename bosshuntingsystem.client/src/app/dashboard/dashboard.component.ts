@@ -10,7 +10,7 @@ type Boss = {
   respawnHours: number;
   lastKilledAt: Date; // PHT (Philippine Time) from backend
   nextRespawnAt: Date; // PHT (Philippine Time) from backend
-  killer?: string;
+  owner?: string;
 };
 
 @Component({
@@ -86,7 +86,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             respawnHours: r.respawnHours,
             lastKilledAt: lastKilledAt,
             nextRespawnAt: nextRespawnAt,
-            killer: r.killer
+            owner: r.owner
           };
         });
         console.log('[BossHunt] Updated local bosses array, count:', this.bosses.length);
@@ -103,11 +103,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // CRUD actions
-  public editModel: { id?: number; name: string; respawnHours: number; lastKilledAt: string; killer?: string } =
-    { name: '', respawnHours: 1, lastKilledAt: '', killer: '' };
+  public editModel: { id?: number; name: string; respawnHours: number; lastKilledAt: string; owner?: string } =
+    { name: '', respawnHours: 1, lastKilledAt: '', owner: '' };
 
   startNew(): void {
-    this.editModel = { name: '', respawnHours: 1, lastKilledAt: '', killer: '' };
+    this.editModel = { name: '', respawnHours: 1, lastKilledAt: '', owner: '' };
   }
 
   startEdit(boss: Boss): void {
@@ -120,7 +120,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           name: freshBoss.name,
           respawnHours: freshBoss.respawnHours,
           lastKilledAt: phtDate ? this._dateUtils.phtToDatetimeLocal(phtDate) : '',
-          killer: freshBoss.killer || ''
+          owner: freshBoss.owner || ''
         };
       },
       error: (e) => {
@@ -132,7 +132,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           name: boss.name,
           respawnHours: boss.respawnHours,
           lastKilledAt: phtDate ? this._dateUtils.phtToDatetimeLocal(phtDate) : '',
-          killer: boss.killer || ''
+          owner: boss.owner || ''
         };
       }
     });
@@ -143,23 +143,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     if (this.editModel.lastKilledAt.trim() !== '') {
       // The datetime-local input provides a PHT time string
-      // Send PHT time directly to backend - let backend convert to UTC
+      // Convert PHT to UTC for server storage
       const phtDate = this._dateUtils.datetimeLocalToPht(this.editModel.lastKilledAt);
-      // Format as PHT time string for backend
-      const year = phtDate.getFullYear();
-      const month = String(phtDate.getMonth() + 1).padStart(2, '0');
-      const day = String(phtDate.getDate()).padStart(2, '0');
-      const hours = String(phtDate.getHours()).padStart(2, '0');
-      const minutes = String(phtDate.getMinutes()).padStart(2, '0');
-      const seconds = String(phtDate.getSeconds()).padStart(2, '0');
-      lastKilledAtValue = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      // Convert PHT to UTC ISO string for backend
+      lastKilledAtValue = this._dateUtils.localToUtc(phtDate);
     }
     
     const payload: BossCreateUpdateDto = {
       name: this.editModel.name,
       respawnHours: this.editModel.respawnHours,
       lastKilledAt: lastKilledAtValue,
-      killer: this.editModel.killer?.trim() || undefined
+      owner: this.editModel.owner?.trim() || undefined
     };
     const onDone = () => { this.startNew(); this.loadBosses(); };
     if (this.editModel.id) {
@@ -188,10 +182,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   defeat(boss: Boss): void {
     if (!this.isAvailable(boss)) { return; }
     
-    // Use the current killer value from the boss record
-    const killer = boss.killer;
+    // Use the current owner value from the boss record
+    const owner = boss.owner;
     
-    this.bossApi.defeat(boss.id, killer || undefined).subscribe({
+    this.bossApi.defeat(boss.id, owner || undefined).subscribe({
       next: (updated) => {
         // Backend already returns PHT dates, no conversion needed
         const nextRespawnAt = new Date(updated.nextRespawnAt);
@@ -199,7 +193,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         
         boss.lastKilledAt = lastKilledAt;
         boss.nextRespawnAt = nextRespawnAt;
-        boss.killer = updated.killer;
+        boss.owner = updated.owner;
       },
       error: (e) => console.error(e)
     });
@@ -212,8 +206,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Use the current killer value from the boss record
-    const killer = boss.killer;
+    // Use the current owner value from the boss record
+    const owner = boss.owner;
     
     // Get current PHT time for the defeated at timestamp
     const currentPhtTime = this._dateUtils.getCurrentPhtTime();
@@ -230,7 +224,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // Create payload with current PHT time
     const payload = {
-      killer: killer?.trim() || undefined,
+      owner: owner?.trim() || undefined,
       defeatedAt: defeatedAtPht
     };
     

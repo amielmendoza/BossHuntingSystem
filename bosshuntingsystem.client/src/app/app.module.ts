@@ -13,10 +13,8 @@ import { NotificationsComponent } from './notifications/notifications.component'
 import { MembersComponent } from './members/members.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { CacheInterceptor } from './cache-interceptor';
-import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { JaeComponent } from './jae/jae.component';
 import { DateUtilsService } from './utils/date-utils.service';
-import { LoginComponent } from './login/login.component';
 
 @NgModule({
   declarations: [
@@ -25,8 +23,7 @@ import { LoginComponent } from './login/login.component';
     NotificationsComponent,
     MembersComponent,
     DashboardComponent,
-    JaeComponent,
-    LoginComponent
+    JaeComponent
   ],
   imports: [
     BrowserModule, CommonModule, HttpClientModule, FormsModule, ReactiveFormsModule, RouterModule,
@@ -36,11 +33,6 @@ import { LoginComponent } from './login/login.component';
     {
       provide: HTTP_INTERCEPTORS,
       useClass: CacheInterceptor,
-      multi: true
-    },
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: AuthInterceptor,
       multi: true
     },
     DateUtilsService

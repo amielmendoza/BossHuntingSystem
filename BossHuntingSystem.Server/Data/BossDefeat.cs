@@ -30,7 +30,7 @@ namespace BossHuntingSystem.Server.Data
         public string LootItemsJson { get; set; } = "[]";
         
         [MaxLength(100)]
-        public string? Killer { get; set; }
+        public string? Owner { get; set; }
         
         // Navigation property
         [ForeignKey("BossId")]

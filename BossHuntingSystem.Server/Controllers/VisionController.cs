@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using BossHuntingSystem.Server.Models;
 using Azure;
 using Azure.AI.Vision.ImageAnalysis;
@@ -10,7 +9,6 @@ namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Policy = "User")] // Require authentication for vision analysis
     public class VisionController : ControllerBase
     {
         private readonly IConfiguration _configuration;

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet run:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(dotnet tool restore:*)",
+      "Bash(dotnet ef database:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

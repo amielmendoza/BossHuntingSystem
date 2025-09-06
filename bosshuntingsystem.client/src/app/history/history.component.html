@@ -17,7 +17,7 @@
         <tr>
           <th>Boss</th>
           <th>Defeated At</th>
-          <th>Killed By</th>
+          <th>Owned By</th>
           <th>Loots</th>
           <th>Attendees</th>
           <th class="text-end">Actions</th>
@@ -27,7 +27,7 @@
         <tr *ngFor="let r of rows">
           <td class="it-title">{{ r.bossName }}</td>
           <td class="text-secondary">{{ formatDefeatedAt(r.defeatedAtUtc) }}</td>
-          <td class="text-secondary">{{ r.killer || '-' }}</td>
+          <td class="text-secondary">{{ r.owner || '-' }}</td>
           <td>
             <span class="truncate" [title]="(r.loots || []).join(', ')">
               <ng-container *ngFor="let l of r.loots; let last = last">{{ l }}<span *ngIf="!last">, </span></ng-container>
@@ -75,7 +75,7 @@
           <div class="modal-body" *ngIf="details">
             <div class="mb-2"><strong>Boss:</strong> {{ details.bossName }}</div>
             <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc ? formatDefeatedAt(details.defeatedAtUtc) : 'History Entry (Not Actually Defeated)' }}</div>
-            <div class="mb-2"><strong>Killer:</strong> {{ details.killer || 'Not specified' }}</div>
+            <div class="mb-2"><strong>Owner:</strong> {{ details.owner || 'Not specified' }}</div>
             <hr>
             <div class="mb-3">
               <div class="d-flex justify-content-between align-items-center mb-2">

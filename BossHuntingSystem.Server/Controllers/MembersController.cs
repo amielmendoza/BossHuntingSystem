@@ -1,15 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using BossHuntingSystem.Server.Data;
-using BossHuntingSystem.Server.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Policy = "User")] // Require authentication for all endpoints
     public class MembersController : ControllerBase
     {
         private readonly BossHuntingDbContext _context;
@@ -22,7 +19,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "ReadOnly")] // Require authentication to view members
         public async Task<ActionResult<IEnumerable<MemberDto>>> GetAll()
         {
             try
@@ -57,7 +53,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("{id:int}")]
-        [Authorize(Policy = "ReadOnly")] // Require authentication to view individual members
         public async Task<ActionResult<MemberDto>> GetById(int id)
         {
             try
@@ -91,27 +86,25 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = "MemberManagement")] // Only admins can create members
         public async Task<ActionResult<MemberDto>> Create([FromBody] CreateUpdateMemberDto dto)
         {
-            var username = User.GetUsername();
-            _logger.LogInformation("User {Username} attempting to create member: {Name}", username, dto?.Name);
+            _logger.LogInformation("Attempting to create member: {Name}", dto?.Name);
 
             if (dto == null) 
             {
-                _logger.LogWarning("User {Username} attempted to create member with null request body", username);
+                _logger.LogWarning("Attempted to create member with null request body");
                 return BadRequest("Request body is required");
             }
             
             if (string.IsNullOrWhiteSpace(dto.Name)) 
             {
-                _logger.LogWarning("User {Username} attempted to create member with empty name", username);
+                _logger.LogWarning("Attempted to create member with empty name");
                 return BadRequest("Name is required");
             }
             
             if (dto.CombatPower < 0) 
             {
-                _logger.LogWarning("User {Username} attempted to create member with invalid combat power: {CombatPower}", username, dto.CombatPower);
+                _logger.LogWarning("Attempted to create member with invalid combat power: {CombatPower}", dto.CombatPower);
                 return BadRequest("Combat power must be non-negative");
             }
 
@@ -123,7 +116,7 @@ namespace BossHuntingSystem.Server.Controllers
                 
                 if (existingMember != null)
                 {
-                    _logger.LogWarning("User {Username} attempted to create member with duplicate name: {Name}", username, dto.Name);
+                    _logger.LogWarning("Attempted to create member with duplicate name: {Name}", dto.Name);
                     return BadRequest($"Member with name '{dto.Name}' already exists");
                 }
 
@@ -140,7 +133,7 @@ namespace BossHuntingSystem.Server.Controllers
                 _context.Members.Add(member);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User {Username} successfully created member {Id} with name {Name}", username, member.Id, member.Name);
+                _logger.LogInformation("Successfully created member {Id} with name {Name}", member.Id, member.Name);
 
                 var responseDto = new MemberDto
                 {
@@ -157,33 +150,31 @@ namespace BossHuntingSystem.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "User {Username} failed to create member {Name}", username, dto.Name);
+                _logger.LogError(ex, "Failed to create member {Name}", dto.Name);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPut("{id:int}")]
-        [Authorize(Policy = "MemberManagement")] // Only admins can update members
         public async Task<ActionResult<MemberDto>> Update(int id, [FromBody] CreateUpdateMemberDto dto)
         {
-            var username = User.GetUsername();
-            _logger.LogInformation("User {Username} attempting to update member {Id}", username, id);
+            _logger.LogInformation("Attempting to update member {Id}", id);
 
             if (dto == null) 
             {
-                _logger.LogWarning("User {Username} attempted to update member {Id} with null request body", username, id);
+                _logger.LogWarning("Attempted to update member {Id} with null request body", id);
                 return BadRequest("Request body is required");
             }
             
             if (string.IsNullOrWhiteSpace(dto.Name)) 
             {
-                _logger.LogWarning("User {Username} attempted to update member {Id} with empty name", username, id);
+                _logger.LogWarning("Attempted to update member {Id} with empty name", id);
                 return BadRequest("Name is required");
             }
             
             if (dto.CombatPower < 0) 
             {
-                _logger.LogWarning("User {Username} attempted to update member {Id} with invalid combat power: {CombatPower}", username, id, dto.CombatPower);
+                _logger.LogWarning("Attempted to update member {Id} with invalid combat power: {CombatPower}", id, dto.CombatPower);
                 return BadRequest("Combat power must be non-negative");
             }
 
@@ -192,7 +183,7 @@ namespace BossHuntingSystem.Server.Controllers
                 var existing = await _context.Members.FindAsync(id);
                 if (existing == null)
                 {
-                    _logger.LogWarning("User {Username} attempted to update non-existent member {Id}", username, id);
+                    _logger.LogWarning("Attempted to update non-existent member {Id}", id);
                     return NotFound();
                 }
 
@@ -202,7 +193,7 @@ namespace BossHuntingSystem.Server.Controllers
                 
                 if (duplicateMember != null)
                 {
-                    _logger.LogWarning("User {Username} attempted to update member {Id} with duplicate name: {Name}", username, id, dto.Name);
+                    _logger.LogWarning("Attempted to update member {Id} with duplicate name: {Name}", id, dto.Name);
                     return BadRequest($"Another member with name '{dto.Name}' already exists");
                 }
 
@@ -214,7 +205,7 @@ namespace BossHuntingSystem.Server.Controllers
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User {Username} successfully updated member {Id}", username, id);
+                _logger.LogInformation("Successfully updated member {Id}", id);
 
                 var responseDto = new MemberDto
                 {
@@ -231,36 +222,34 @@ namespace BossHuntingSystem.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "User {Username} failed to update member {Id}", username, id);
+                _logger.LogError(ex, "Failed to update member {Id}", id);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize(Policy = "MemberManagement")] // Only admins can delete members
         public async Task<IActionResult> Delete(int id)
         {
-            var username = User.GetUsername();
-            _logger.LogInformation("User {Username} attempting to delete member {Id}", username, id);
+            _logger.LogInformation("Attempting to delete member {Id}", id);
 
             try
             {
                 var existing = await _context.Members.FindAsync(id);
                 if (existing == null)
                 {
-                    _logger.LogWarning("User {Username} attempted to delete non-existent member {Id}", username, id);
+                    _logger.LogWarning("Attempted to delete non-existent member {Id}", id);
                     return NotFound();
                 }
 
                 _context.Members.Remove(existing);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User {Username} successfully deleted member {Id} with name {Name}", username, id, existing.Name);
+                _logger.LogInformation("Successfully deleted member {Id} with name {Name}", id, existing.Name);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "User {Username} failed to delete member {Id}", username, id);
+                _logger.LogError(ex, "Failed to delete member {Id}", id);
                 return StatusCode(500, "Database error occurred");
             }
         }

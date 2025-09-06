@@ -3,39 +3,44 @@ import { Injectable } from '@angular/core';
 @Injectable()
 export class DateUtilsService {
 
-  // PHT timezone offset: GMT+8 (8 hours ahead of UTC)
-  private readonly PHT_OFFSET_HOURS = 8;
-
   /**
-   * Converts a UTC date string to PHT (Philippine Time) Date object
-   * @param utcDateInput - ISO date string from server (UTC) or Date object
-   * @returns PHT Date object
+   * Converts a date from the server to a local Date object
+   * The server now sends dates already converted to PHT, so we just create a Date object
+   * @param serverDateInput - Date string from server (already in PHT) or Date object
+   * @returns Date object representing PHT time
    */
-  utcToLocal(utcDateInput: string | Date | null): Date | null {
-    if (!utcDateInput) return null;
+  utcToLocal(serverDateInput: string | Date | null): Date | null {
+    if (!serverDateInput) return null;
     
-    // If it's already a Date object, assume it's already in PHT
-    if (utcDateInput instanceof Date) {
-      return utcDateInput;
+    // If it's already a Date object, return as-is
+    if (serverDateInput instanceof Date) {
+      return serverDateInput;
     }
     
-    // Create a Date object from the UTC string and convert to PHT
-    const utcDate = new Date(utcDateInput);
-    const phtDate = new Date(utcDate.getTime() + (this.PHT_OFFSET_HOURS * 60 * 60 * 1000));
-    
-    return phtDate;
+    // Server sends dates in PHT format, so just parse them
+    return new Date(serverDateInput);
   }
 
   /**
-   * Converts a PHT Date to UTC string for server communication
+   * Converts a local PHT Date to UTC ISO string for server communication
    * @param phtDate - PHT Date object
    * @returns UTC ISO string
    */
   localToUtc(phtDate: Date): string {
-    // Convert PHT to UTC by subtracting 8 hours
-    const utcTime = new Date(phtDate.getTime() - (this.PHT_OFFSET_HOURS * 60 * 60 * 1000));
+    // Create a new date assuming the input represents PHT time
+    // We need to convert it to UTC for server storage
+    const phtYear = phtDate.getFullYear();
+    const phtMonth = phtDate.getMonth();
+    const phtDate_day = phtDate.getDate();
+    const phtHours = phtDate.getHours();
+    const phtMinutes = phtDate.getMinutes();
+    const phtSeconds = phtDate.getSeconds();
+    const phtMilliseconds = phtDate.getMilliseconds();
     
-    return utcTime.toISOString();
+    // Create UTC date by subtracting 8 hours from the PHT time
+    const utcDate = new Date(Date.UTC(phtYear, phtMonth, phtDate_day, phtHours - 8, phtMinutes, phtSeconds, phtMilliseconds));
+    
+    return utcDate.toISOString();
   }
 
   /**
@@ -58,23 +63,21 @@ export class DateUtilsService {
   }
 
   /**
-   * Converts UTC string or Date to PHT formatted string for display
-   * @param utcDateInput - UTC date string from server or Date object
+   * Converts server date (already in PHT) to PHT formatted string for display
+   * @param serverDateInput - Date string from server (already in PHT) or Date object
    * @returns Formatted PHT date string
    */
-  formatUtcForDisplay(utcDateInput: string | Date | null): string {
-    if (!utcDateInput) return '';
+  formatUtcForDisplay(serverDateInput: string | Date | null): string {
+    if (!serverDateInput) return '';
     
-    // If it's already a Date object, assume it's already in PHT
-    if (utcDateInput instanceof Date) {
-      return this.formatForDisplay(utcDateInput);
+    // If it's already a Date object, format directly
+    if (serverDateInput instanceof Date) {
+      return this.formatForDisplay(serverDateInput);
     }
     
-    // For UTC strings, convert to PHT and format
-    const utcDate = new Date(utcDateInput);
-    const phtDate = new Date(utcDate.getTime() + (this.PHT_OFFSET_HOURS * 60 * 60 * 1000));
-    
-    return this.formatForDisplay(phtDate);
+    // Server sends dates in PHT format, so just parse and format
+    const date = new Date(serverDateInput);
+    return this.formatForDisplay(date);
   }
 
   /**
@@ -82,8 +85,10 @@ export class DateUtilsService {
    * @returns Current PHT Date object
    */
   getCurrentPhtTime(): Date {
-    const utcNow = new Date();
-    return new Date(utcNow.getTime() + (this.PHT_OFFSET_HOURS * 60 * 60 * 1000));
+    // Get current time in PHT timezone
+    const now = new Date();
+    const phtTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    return phtTime;
   }
 
   /**
@@ -93,7 +98,7 @@ export class DateUtilsService {
    */
   datetimeLocalToPht(datetimeLocalString: string): Date {
     // The datetime-local input is assumed to be in PHT
-    // Create a Date object and ensure it's treated as PHT
+    // Create a Date object treating it as local time (PHT)
     const phtDate = new Date(datetimeLocalString);
     return phtDate;
   }
@@ -122,7 +127,9 @@ export class DateUtilsService {
   formatPhtForDisplay(phtDate: Date | null): string {
     if (!phtDate) return '';
     
+    // Use Asia/Manila timezone for consistent PHT display
     return phtDate.toLocaleString('en-US', {
+      timeZone: 'Asia/Manila',
       month: '2-digit',
       day: '2-digit',
       year: 'numeric',

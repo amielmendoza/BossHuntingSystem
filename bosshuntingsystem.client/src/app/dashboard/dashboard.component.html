@@ -17,8 +17,8 @@
                [(ngModel)]="editModel.lastKilledAt" name="lastKilledAt">
       </div>
       <div class="col-6 col-md-2">
-        <label class="form-label small text-muted">Killed By</label>
-        <input type="text" class="form-control" [(ngModel)]="editModel.killer" name="killer" placeholder="Optional">
+        <label class="form-label small text-muted">Owned By</label>
+        <input type="text" class="form-control" [(ngModel)]="editModel.owner" name="owner" placeholder="Optional">
       </div>
       <div class="col-12 col-md-1 d-grid">
         <button type="submit" class="btn btn-primary">{{ editModel.id ? 'Update' : 'Add' }}</button>
@@ -46,7 +46,7 @@
             <th>Respawn Time</th>
             <th>Last Killed At</th>
             <th>Next Respawn</th>
-            <th>Killed By</th>
+            <th>Owned By</th>
             <th>Countdown</th>
             <th class="text-end">Actions</th>
           </tr>
@@ -58,7 +58,7 @@
             <td class="text-secondary">{{ b.respawnHours }} hrs</td>
             <td class="text-secondary">{{ dateUtils.formatPhtForDisplay(b.lastKilledAt) || '-' }}</td>
             <td class="text-secondary">{{ dateUtils.formatPhtForDisplay(nextRespawnAt(b)) }}</td>
-            <td class="text-secondary">{{ b.killer || '-' }}</td>
+            <td class="text-secondary">{{ b.owner || '-' }}</td>
             <td>
               <span class="badge" [ngClass]="isAvailable(b) ? 'text-bg-success' : 'text-bg-warning'">
                 {{ countdownText(b) }}
