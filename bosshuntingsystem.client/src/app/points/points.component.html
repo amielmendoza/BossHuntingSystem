@@ -4,9 +4,14 @@
       <div class="fw-semibold">Member Points System</div>
       <div class="small text-muted">Points earned from boss battle attendance</div>
     </div>
-    <button class="btn btn-sm btn-outline-secondary" (click)="refreshPoints()" title="Refresh points data">
-      <i class="bi bi-arrow-clockwise"></i> Refresh
-    </button>
+    <div>
+      <button class="btn btn-sm btn-success me-2" (click)="toggleDividendsCalculator()" title="Calculate Dividends">
+        <i class="bi bi-calculator"></i> Calculate Dividends
+      </button>
+      <button class="btn btn-sm btn-outline-secondary" (click)="refreshPoints()" title="Refresh points data">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
   </div>
 
   <div *ngIf="loading" class="text-muted">Loading points...</div>
@@ -62,5 +67,138 @@
       <li>Rankings are updated automatically when new battles are recorded</li>
       <li>Members are ranked by total points, then alphabetically by name</li>
     </ul>
+  </div>
+
+  <!-- Dividends Calculator -->
+  <div class="mt-4 border rounded" *ngIf="showDividendsCalculator">
+    <div class="p-3 bg-primary-subtle border-bottom">
+      <h6 class="mb-1">
+        <i class="bi bi-calculator"></i> Dividends Calculator
+      </h6>
+      <div class="small text-muted">Calculate member dividends based on total sales and points earned</div>
+    </div>
+    
+    <div class="p-3">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label for="totalSales" class="form-label">Total Sales Amount *</label>
+          <div class="input-group">
+            <span class="input-group-text">₱</span>
+            <input 
+              type="number" 
+              class="form-control" 
+              id="totalSales" 
+              [(ngModel)]="totalSales"
+              placeholder="0.00"
+              step="0.01"
+              min="0">
+          </div>
+        </div>
+        
+        <div class="col-md-3">
+          <label for="startDate" class="form-label">Start Date (Optional)</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="startDate" 
+            [(ngModel)]="startDate">
+        </div>
+        
+        <div class="col-md-3">
+          <label for="endDate" class="form-label">End Date (Optional)</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="endDate" 
+            [(ngModel)]="endDate">
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+          <button 
+            class="btn btn-primary w-100"
+            (click)="calculateDividends()"
+            [disabled]="calculatingDividends || !totalSales || totalSales <= 0">
+            <span *ngIf="calculatingDividends" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="bi bi-play-fill" *ngIf="!calculatingDividends"></i>
+            Calculate
+          </button>
+        </div>
+      </div>
+      
+      <div class="small text-muted mt-2">
+        <i class="bi bi-info-circle"></i>
+        Formula: Dividend = (Total Sales ÷ Total Points) × Member Points
+      </div>
+    </div>
+
+    <!-- Dividends Results -->
+    <div class="border-top" *ngIf="dividendsResult">
+      <div class="p-3 bg-success-subtle border-bottom">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="small text-muted">Total Sales</div>
+            <div class="fw-bold">₱{{ dividendsResult.totalSales | number:'1.2-2' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted">Total Points</div>
+            <div class="fw-bold">{{ dividendsResult.totalPoints }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted">Rate per Point</div>
+            <div class="fw-bold">₱{{ (dividendsResult.totalSales / dividendsResult.totalPoints) | number:'1.2-2' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted">Total Dividends</div>
+            <div class="fw-bold text-success">₱{{ getTotalDividends() | number:'1.2-2' }}</div>
+          </div>
+        </div>
+        
+        <div class="small text-muted mt-2" *ngIf="dividendsResult.periodStart || dividendsResult.periodEnd">
+          <i class="bi bi-calendar-range"></i>
+          Period: 
+          <span *ngIf="dividendsResult.periodStart">{{ dividendsResult.periodStart | date:'short' }}</span>
+          <span *ngIf="!dividendsResult.periodStart">Beginning</span>
+          to 
+          <span *ngIf="dividendsResult.periodEnd">{{ dividendsResult.periodEnd | date:'short' }}</span>
+          <span *ngIf="!dividendsResult.periodEnd">Now</span>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:50px">#</th>
+              <th>Member Name</th>
+              <th>Points</th>
+              <th>Dividend Amount</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let member of dividendsResult.memberDividends; let i = index">
+              <td class="text-muted">{{ i + 1 }}</td>
+              <td class="it-title">{{ member.memberName }}</td>
+              <td>
+                <span class="badge text-bg-primary">{{ member.points }}</span>
+              </td>
+              <td class="fw-bold text-success">₱{{ member.dividend | number:'1.2-2' }}</td>
+              <td class="text-muted">
+                {{ (member.dividend / dividendsResult.totalSales * 100) | number:'1.1-1' }}%
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="p-3 bg-light text-center">
+        <button class="btn btn-outline-success btn-sm me-2" onclick="window.print()">
+          <i class="bi bi-printer"></i> Print Results
+        </button>
+        <button class="btn btn-outline-primary btn-sm" (click)="dividendsResult = null">
+          <i class="bi bi-x-circle"></i> Clear Results
+        </button>
+      </div>
+    </div>
   </div>
 </div>

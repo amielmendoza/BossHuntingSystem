@@ -26,7 +26,8 @@ namespace BossHuntingSystem.Server.Controllers
             {
                 await _discordService.SendBossNotificationAsync(
                     request.BossName, 
-                    request.MinutesUntilRespawn ?? 5);
+                    request.MinutesUntilRespawn ?? 5, 
+                    request.Owner);
 
                 return Ok(new { message = "Discord notification sent successfully" });
             }
@@ -42,5 +43,6 @@ namespace BossHuntingSystem.Server.Controllers
         public string BossName { get; set; } = string.Empty;
         public string? Location { get; set; }
         public int? MinutesUntilRespawn { get; set; }
+        public string? Owner { get; set; }
     }
 }

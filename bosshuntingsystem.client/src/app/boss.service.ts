@@ -69,6 +69,27 @@ export interface MemberPointsDto {
   bossesAttended: number;
 }
 
+export interface DividendsCalculationRequest {
+  totalSales: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface MemberDividendDto {
+  memberName: string;
+  points: number;
+  dividend: number;
+}
+
+export interface DividendsCalculationResult {
+  totalSales: number;
+  totalPoints: number;
+  periodStart?: string;
+  periodEnd?: string;
+  memberDividends: MemberDividendDto[];
+  calculatedAt: string;
+}
+
 
 
 
@@ -184,6 +205,11 @@ export class BossService {
   // Get member points from attendance tracking
   getMemberPoints(): Observable<MemberPointsDto[]> {
     return this.http.get<MemberPointsDto[]>(this.url('/api/bosses/points'));
+  }
+
+  // Calculate dividends based on total sales and member points
+  calculateDividends(request: DividendsCalculationRequest): Observable<DividendsCalculationResult> {
+    return this.http.post<DividendsCalculationResult>(this.url('/api/bosses/calculate-dividends'), request);
   }
 
 

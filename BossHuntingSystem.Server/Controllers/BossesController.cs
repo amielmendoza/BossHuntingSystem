@@ -634,9 +634,9 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
-                await _discordService.SendBossNotificationAsync(dto.BossName, dto.MinutesUntilRespawn ?? 5);
+                await _discordService.SendBossNotificationAsync(dto.BossName, dto.MinutesUntilRespawn ?? 5, dto.Owner);
                 
-                _logger.LogInformation("Successfully sent manual notification for boss {BossName}", dto.BossName);
+                _logger.LogInformation("Successfully sent manual notification for boss {BossName} owned by {Owner}", dto.BossName, dto.Owner ?? "Unknown");
                 
                 return Ok(new { message = "Notification sent successfully" });
             }
@@ -697,6 +697,95 @@ namespace BossHuntingSystem.Server.Controllers
             }
         }
 
+        [HttpPost("calculate-dividends")]
+        public async Task<ActionResult<DividendsCalculationResult>> CalculateDividends([FromBody] DividendsCalculationRequest request)
+        {
+            if (request == null || request.TotalSales <= 0)
+            {
+                return BadRequest("Total sales must be greater than 0");
+            }
+
+            try
+            {
+                // Get member points for the specified time range or all time
+                var defeats = await GetDefeatsByDateRange(request.StartDate, request.EndDate);
+                
+                // Calculate member points from defeats
+                var memberPoints = new Dictionary<string, int>();
+                
+                foreach (var defeat in defeats)
+                {
+                    foreach (var attendee in defeat.Attendees)
+                    {
+                        if (!string.IsNullOrWhiteSpace(attendee))
+                        {
+                            if (memberPoints.ContainsKey(attendee))
+                            {
+                                memberPoints[attendee]++;
+                            }
+                            else
+                            {
+                                memberPoints[attendee] = 1;
+                            }
+                        }
+                    }
+                }
+
+                var totalPoints = memberPoints.Values.Sum();
+                
+                if (totalPoints == 0)
+                {
+                    return BadRequest("No members with points found for the specified period");
+                }
+
+                // Calculate dividends using the formula: Dividend = (Total Sales / Total Points) × Player's Points
+                var dividends = memberPoints
+                    .Select(kvp => new MemberDividendDto
+                    {
+                        MemberName = kvp.Key,
+                        Points = kvp.Value,
+                        Dividend = Math.Round((request.TotalSales / totalPoints) * kvp.Value, 2)
+                    })
+                    .OrderByDescending(d => d.Dividend)
+                    .ThenBy(d => d.MemberName)
+                    .ToList();
+
+                var result = new DividendsCalculationResult
+                {
+                    TotalSales = request.TotalSales,
+                    TotalPoints = totalPoints,
+                    PeriodStart = request.StartDate,
+                    PeriodEnd = request.EndDate,
+                    MemberDividends = dividends,
+                    CalculatedAt = DateTime.UtcNow
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating dividends");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        private async Task<List<BossDefeat>> GetDefeatsByDateRange(DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.BossDefeats.AsQueryable();
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(d => d.DefeatedAtUtc >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(d => d.DefeatedAtUtc <= endDate.Value);
+            }
+
+            return await query.ToListAsync();
+        }
+
 
     }
 
@@ -713,6 +802,7 @@ namespace BossHuntingSystem.Server.Controllers
     {
         public string BossName { get; set; } = string.Empty;
         public int? MinutesUntilRespawn { get; set; }
+        public string? Owner { get; set; }
     }
 
     public class BossResponseDto
@@ -759,5 +849,29 @@ namespace BossHuntingSystem.Server.Controllers
         public string MemberName { get; set; } = string.Empty;
         public int Points { get; set; }
         public int BossesAttended { get; set; }
+    }
+
+    public class DividendsCalculationRequest
+    {
+        public decimal TotalSales { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+    }
+
+    public class MemberDividendDto
+    {
+        public string MemberName { get; set; } = string.Empty;
+        public int Points { get; set; }
+        public decimal Dividend { get; set; }
+    }
+
+    public class DividendsCalculationResult
+    {
+        public decimal TotalSales { get; set; }
+        public int TotalPoints { get; set; }
+        public DateTime? PeriodStart { get; set; }
+        public DateTime? PeriodEnd { get; set; }
+        public List<MemberDividendDto> MemberDividends { get; set; } = new();
+        public DateTime CalculatedAt { get; set; }
     }
 }
