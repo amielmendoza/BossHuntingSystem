@@ -1,72 +1,199 @@
-<div class="cardx span-12">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <div>
-      <div class="fw-semibold">Member Points System</div>
-      <div class="small text-muted">Points earned from boss battle attendance</div>
+<div class="cardx span-12 animate-fade-in">
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="header-section">
+      <h2 class="card-title mb-2">
+        <i class="bi bi-trophy-fill text-warning me-2"></i>
+        Member Points System
+      </h2>
+      <p class="card-subtitle text-muted mb-0">Track guild member performance and calculate profit sharing</p>
     </div>
-    <div>
-      <button class="btn btn-sm btn-success me-2" (click)="toggleDividendsCalculator()" title="Calculate Dividends">
-        <i class="bi bi-calculator"></i> Calculate Dividends
+    <div class="action-buttons d-flex gap-2">
+      <button class="btn btn-success btn-modern hover-lift button-press" (click)="toggleDividendsCalculator()" title="Calculate Dividends">
+        <i class="bi bi-calculator me-1"></i>
+        <span class="d-none d-sm-inline">Calculate Dividends</span>
       </button>
-      <button class="btn btn-sm btn-outline-secondary" (click)="refreshPoints()" title="Refresh points data">
-        <i class="bi bi-arrow-clockwise"></i> Refresh
+      <button class="btn btn-outline-primary btn-modern hover-lift button-press" (click)="refreshPoints()" title="Refresh points data">
+        <i class="bi bi-arrow-clockwise me-1" [class.animate-spin]="loading"></i>
+        <span class="d-none d-sm-inline">Refresh</span>
       </button>
     </div>
   </div>
 
-  <div *ngIf="loading" class="text-muted">Loading points...</div>
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state text-center py-5">
+    <div class="spinner-border text-primary mb-3" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mb-0">Loading member points data...</p>
+  </div>
   
-  <div class="table-responsive" *ngIf="!loading">
-    <table class="table align-middle mb-0">
-      <thead class="table-light">
-        <tr>
-          <th style="width:50px">#</th>
-          <th>Member Name</th>
-          <th>Total Points</th>
-          <th>Bosses Attended</th>
-          <th>Rank</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let member of memberPoints; let i = index">
-          <td class="text-muted">{{ i + 1 }}</td>
-          <td class="it-title">{{ member.memberName }}</td>
-          <td>
-            <span class="badge text-bg-primary">{{ member.points }}</span>
-          </td>
-          <td class="text-secondary">{{ member.bossesAttended }}</td>
-          <td>
-            <span class="badge" 
-                  [ngClass]="{
-                    'text-bg-warning': i === 0,
-                    'text-bg-secondary': i === 1,
-                    'text-bg-light text-dark': i === 2,
-                    'text-bg-outline-secondary': i > 2
-                  }">
-              <ng-container *ngIf="i === 0">🥇 1st</ng-container>
-              <ng-container *ngIf="i === 1">🥈 2nd</ng-container>
-              <ng-container *ngIf="i === 2">🥉 3rd</ng-container>
-              <ng-container *ngIf="i > 2">{{ i + 1 }}th</ng-container>
-            </span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <!-- Points Leaderboard -->
+  <div class="table-container" *ngIf="!loading">
+    <div class="table-responsive">
+      <table class="table points-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="rank-column">Rank</th>
+            <th class="member-column">Member</th>
+            <th class="points-column">Points</th>
+            <th class="attendance-column">Battles</th>
+            <th class="performance-column">Performance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let member of memberPoints; let i = index" class="member-row animate-slide-in" [class.top-performer]="i < 3" [style.animation-delay.s]="i * 0.1">
+            <td class="rank-cell">
+              <div class="rank-badge" [ngClass]="{
+                'rank-gold': i === 0,
+                'rank-silver': i === 1,
+                'rank-bronze': i === 2,
+                'rank-default': i > 2
+              }">
+                <span class="rank-number">{{ i + 1 }}</span>
+                <span class="rank-icon" *ngIf="i < 3">
+                  <i class="bi bi-trophy-fill" *ngIf="i === 0"></i>
+                  <i class="bi bi-award-fill" *ngIf="i === 1"></i>
+                  <i class="bi bi-medal-fill" *ngIf="i === 2"></i>
+                </span>
+              </div>
+            </td>
+            <td class="member-cell">
+              <div class="member-info">
+                <div class="member-avatar">
+                  {{ member.memberName.charAt(0).toUpperCase() }}
+                </div>
+                <div class="member-details">
+                  <div class="member-name">{{ member.memberName }}</div>
+                  <div class="member-status" *ngIf="i < 3">Top Performer</div>
+                </div>
+              </div>
+            </td>
+            <td class="points-cell">
+              <div class="points-display">
+                <span class="points-value">{{ member.points }}</span>
+                <span class="points-label">pts</span>
+              </div>
+            </td>
+            <td class="attendance-cell">
+              <div class="attendance-info">
+                <span class="attendance-count">{{ member.bossesAttended }}</span>
+                <span class="attendance-label">battles</span>
+              </div>
+            </td>
+            <td class="performance-cell">
+              <div class="performance-indicator">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="getPerformancePercentage(member.points)"></div>
+                </div>
+                <span class="performance-percentage">{{ getPerformancePercentage(member.points) | number:'1.0-0' }}%</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     
-    <div class="text-muted small mt-2" *ngIf="memberPoints.length === 0">
-      No attendance records found. Points are earned by attending boss battles.
+    <!-- Empty State -->
+    <div class="empty-state text-center py-5" *ngIf="memberPoints.length === 0">
+      <div class="empty-state-icon mb-3">
+        <i class="bi bi-trophy text-muted" style="font-size: 3rem;"></i>
+      </div>
+      <h5 class="empty-state-title">No Points Data Yet</h5>
+      <p class="text-muted mb-3">Points are earned by attending boss battles. Get started by recording your first battle!</p>
+      <button class="btn btn-primary btn-modern hover-glow button-press">
+        <i class="bi bi-plus-circle me-1"></i>
+        Record First Battle
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick Stats Cards -->
+  <div class="stats-grid mt-4 stagger-animation" *ngIf="memberPoints.length > 0">
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-primary-subtle text-primary">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ memberPoints.length }}</div>
+        <div class="stat-label">Active Members</div>
+      </div>
+    </div>
+    
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-success-subtle text-success">
+        <i class="bi bi-trophy-fill"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getTotalPoints() }}</div>
+        <div class="stat-label">Total Points</div>
+      </div>
+    </div>
+    
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-warning-subtle text-warning">
+        <i class="bi bi-star-fill"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getAveragePoints() | number:'1.1-1' }}</div>
+        <div class="stat-label">Avg Points</div>
+      </div>
+    </div>
+    
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-info-subtle text-info">
+        <i class="bi bi-graph-up"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getHighestScore() }}</div>
+        <div class="stat-label">Highest Score</div>
+      </div>
     </div>
   </div>
 
   <!-- Points Information Card -->
-  <div class="mt-4 p-3 border rounded bg-light">
-    <h6 class="mb-2">How Points Work</h6>
-    <ul class="small mb-0">
-      <li>Each boss battle attendance earns 1 point</li>
-      <li>Points are calculated from the attendance records in boss battle history</li>
-      <li>Rankings are updated automatically when new battles are recorded</li>
-      <li>Members are ranked by total points, then alphabetically by name</li>
-    </ul>
+  <div class="info-card mt-4">
+    <div class="info-header">
+      <h6 class="info-title">
+        <i class="bi bi-info-circle me-2"></i>
+        How Points Work
+      </h6>
+    </div>
+    <div class="info-content">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-plus-circle text-success"></i>
+          </div>
+          <div class="info-text">
+            <strong>Earn Points:</strong> Each boss battle attendance = 1 point
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-calculator text-primary"></i>
+          </div>
+          <div class="info-text">
+            <strong>Auto Calculation:</strong> Points calculated from battle history
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-arrow-up text-warning"></i>
+          </div>
+          <div class="info-text">
+            <strong>Live Rankings:</strong> Updated when new battles are recorded
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-sort-down text-info"></i>
+          </div>
+          <div class="info-text">
+            <strong>Sorting:</strong> Ranked by total points, then alphabetically
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Dividends Calculator -->

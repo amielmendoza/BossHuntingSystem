@@ -86,4 +86,24 @@ export class PointsComponent implements OnInit {
   getTotalDividends(): number {
     return this.dividendsResult?.memberDividends.reduce((total, member) => total + member.dividend, 0) || 0;
   }
+
+  getTotalPoints(): number {
+    return this.memberPoints.reduce((total, member) => total + member.points, 0);
+  }
+
+  getAveragePoints(): number {
+    if (this.memberPoints.length === 0) return 0;
+    return this.getTotalPoints() / this.memberPoints.length;
+  }
+
+  getHighestScore(): number {
+    if (this.memberPoints.length === 0) return 0;
+    return this.memberPoints[0]?.points || 0;
+  }
+
+  getPerformancePercentage(points: number): number {
+    const highestScore = this.getHighestScore();
+    if (highestScore === 0) return 0;
+    return (points / highestScore) * 100;
+  }
 }
