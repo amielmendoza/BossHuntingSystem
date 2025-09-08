@@ -140,7 +140,8 @@ namespace BossHuntingSystem.Server.Services
                 var defeats = await context.BossDefeats.ToListAsync();
                 
                 // Calculate points per member
-                var memberPointsDict = new Dictionary<string, (decimal points, int bossesAttended)>();
+                // Using case-insensitive comparison to handle different casing of member names
+                var memberPointsDict = new Dictionary<string, (decimal points, int bossesAttended)>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var defeat in defeats)
                 {

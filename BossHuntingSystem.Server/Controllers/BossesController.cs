@@ -716,8 +716,9 @@ namespace BossHuntingSystem.Server.Controllers
                 var defeats = await _context.BossDefeats.ToListAsync();
                 
                 // Dictionary to track points for each member (now using decimal for late attendance)
-                var memberPoints = new Dictionary<string, decimal>();
-                var memberBattleCount = new Dictionary<string, int>();
+                // Using case-insensitive comparison to handle different casing of member names
+                var memberPoints = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+                var memberBattleCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
                 
                 foreach (var defeat in defeats)
                 {
@@ -780,7 +781,8 @@ namespace BossHuntingSystem.Server.Controllers
                 var defeats = await GetDefeatsByDateRange(request.StartDate, request.EndDate);
                 
                 // Calculate member points from defeats (using new decimal system)
-                var memberPoints = new Dictionary<string, decimal>();
+                // Using case-insensitive comparison to handle different casing of member names
+                var memberPoints = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
                 
                 foreach (var defeat in defeats)
                 {
@@ -861,6 +863,36 @@ namespace BossHuntingSystem.Server.Controllers
             return await query.ToListAsync();
         }
 
+        [HttpPost("history/{id:int}/fix-sync")]
+        public async Task<ActionResult<BossDefeat>> FixAttendeeSync(int id)
+        {
+            try
+            {
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                // Force resync by getting and setting the AttendeeDetails
+                // This will automatically update the legacy Attendees property
+                var attendeeDetails = record.AttendeeDetails;
+                record.AttendeeDetails = attendeeDetails;
+
+                await _context.SaveChangesAsync();
+                
+                Console.WriteLine($"[FixSync] Fixed sync for record {id} - attendees: {record.Attendees.Count}, details: {record.AttendeeDetails.Count}");
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[FixSync] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
 
     }
 
