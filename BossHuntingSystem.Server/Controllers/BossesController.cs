@@ -476,9 +476,23 @@ namespace BossHuntingSystem.Server.Controllers
                 if (record == null) return NotFound();
 
                 var attendeeName = dto.Text.Trim();
-                var attendees = record.Attendees;
-                attendees.Add(attendeeName);
-                record.Attendees = attendees;
+                
+                // Add to new attendee details system (default: not late, 1.0 points)
+                var attendeeDetails = record.AttendeeDetails;
+                
+                // Check if attendee already exists
+                if (attendeeDetails.Any(a => a.Name.Equals(attendeeName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return BadRequest("Attendee already exists");
+                }
+                
+                attendeeDetails.Add(new Data.AttendeeInfo
+                {
+                    Name = attendeeName,
+                    IsLate = false,
+                    Points = 1.0m
+                });
+                record.AttendeeDetails = attendeeDetails;
 
                 await _context.SaveChangesAsync();
                 
@@ -492,6 +506,51 @@ namespace BossHuntingSystem.Server.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"[AddAttendee] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
+        
+        [HttpPost("history/{id:int}/attendee-late")]
+        public async Task<ActionResult<BossDefeat>> AddLateAttendee(int id, [FromBody] AddTextDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Text)) return BadRequest("Text is required");
+
+            try
+            {
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var attendeeName = dto.Text.Trim();
+                
+                // Add to new attendee details system (late: 0.5 points)
+                var attendeeDetails = record.AttendeeDetails;
+                
+                // Check if attendee already exists
+                if (attendeeDetails.Any(a => a.Name.Equals(attendeeName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return BadRequest("Attendee already exists");
+                }
+                
+                attendeeDetails.Add(new Data.AttendeeInfo
+                {
+                    Name = attendeeName,
+                    IsLate = true,
+                    Points = 0.5m
+                });
+                record.AttendeeDetails = attendeeDetails;
+
+                await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AddLateAttendee] Error: {ex.Message}");
                 return StatusCode(500, "Database error occurred");
             }
         }
@@ -655,22 +714,31 @@ namespace BossHuntingSystem.Server.Controllers
                 // Get all boss defeats with attendance data
                 var defeats = await _context.BossDefeats.ToListAsync();
                 
-                // Dictionary to track points for each member
-                var memberPoints = new Dictionary<string, int>();
+                // Dictionary to track points for each member (now using decimal for late attendance)
+                var memberPoints = new Dictionary<string, decimal>();
+                var memberBattleCount = new Dictionary<string, int>();
                 
                 foreach (var defeat in defeats)
                 {
-                    foreach (var attendee in defeat.Attendees)
+                    // Use new AttendeeDetails if available, otherwise fallback to legacy Attendees
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    
+                    foreach (var attendeeInfo in attendeeDetails)
                     {
-                        if (!string.IsNullOrWhiteSpace(attendee))
+                        if (!string.IsNullOrWhiteSpace(attendeeInfo.Name))
                         {
-                            if (memberPoints.ContainsKey(attendee))
+                            var attendeeName = attendeeInfo.Name;
+                            var points = attendeeInfo.IsLate ? 0.5m : 1.0m;
+                            
+                            if (memberPoints.ContainsKey(attendeeName))
                             {
-                                memberPoints[attendee]++;
+                                memberPoints[attendeeName] += points;
+                                memberBattleCount[attendeeName]++;
                             }
                             else
                             {
-                                memberPoints[attendee] = 1;
+                                memberPoints[attendeeName] = points;
+                                memberBattleCount[attendeeName] = 1;
                             }
                         }
                     }
@@ -682,7 +750,7 @@ namespace BossHuntingSystem.Server.Controllers
                     {
                         MemberName = kvp.Key,
                         Points = kvp.Value,
-                        BossesAttended = kvp.Value // Each boss battle attendance = 1 point
+                        BossesAttended = memberBattleCount.ContainsKey(kvp.Key) ? memberBattleCount[kvp.Key] : 0
                     })
                     .OrderByDescending(mp => mp.Points)
                     .ThenBy(mp => mp.MemberName)
@@ -710,22 +778,28 @@ namespace BossHuntingSystem.Server.Controllers
                 // Get member points for the specified time range or all time
                 var defeats = await GetDefeatsByDateRange(request.StartDate, request.EndDate);
                 
-                // Calculate member points from defeats
-                var memberPoints = new Dictionary<string, int>();
+                // Calculate member points from defeats (using new decimal system)
+                var memberPoints = new Dictionary<string, decimal>();
                 
                 foreach (var defeat in defeats)
                 {
-                    foreach (var attendee in defeat.Attendees)
+                    // Use new AttendeeDetails if available, otherwise fallback to legacy Attendees
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    
+                    foreach (var attendeeInfo in attendeeDetails)
                     {
-                        if (!string.IsNullOrWhiteSpace(attendee))
+                        if (!string.IsNullOrWhiteSpace(attendeeInfo.Name))
                         {
-                            if (memberPoints.ContainsKey(attendee))
+                            var attendeeName = attendeeInfo.Name;
+                            var points = attendeeInfo.IsLate ? 0.5m : 1.0m;
+                            
+                            if (memberPoints.ContainsKey(attendeeName))
                             {
-                                memberPoints[attendee]++;
+                                memberPoints[attendeeName] += points;
                             }
                             else
                             {
-                                memberPoints[attendee] = 1;
+                                memberPoints[attendeeName] = points;
                             }
                         }
                     }
@@ -847,7 +921,7 @@ namespace BossHuntingSystem.Server.Controllers
     public class MemberPointsDto
     {
         public string MemberName { get; set; } = string.Empty;
-        public int Points { get; set; }
+        public decimal Points { get; set; }
         public int BossesAttended { get; set; }
     }
 
@@ -861,14 +935,14 @@ namespace BossHuntingSystem.Server.Controllers
     public class MemberDividendDto
     {
         public string MemberName { get; set; } = string.Empty;
-        public int Points { get; set; }
+        public decimal Points { get; set; }
         public decimal Dividend { get; set; }
     }
 
     public class DividendsCalculationResult
     {
         public decimal TotalSales { get; set; }
-        public int TotalPoints { get; set; }
+        public decimal TotalPoints { get; set; }
         public DateTime? PeriodStart { get; set; }
         public DateTime? PeriodEnd { get; set; }
         public List<MemberDividendDto> MemberDividends { get; set; } = new();

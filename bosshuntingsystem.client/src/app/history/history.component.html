@@ -46,11 +46,20 @@
                       title="Add Loot">
                 Add Loot
               </button>
-              <button class="btn btn-sm btn-outline-secondary" 
-                      (click)="openModal(r, 'attendee')" 
-                      title="Add Attendance">
-                Add Attendance
-              </button>
+              <div class="btn-group" role="group" aria-label="Add Attendance">
+                <button class="btn btn-sm btn-outline-success" 
+                        (click)="openModal(r, 'attendee')" 
+                        title="Add On-time Attendance (1.0 points)">
+                  <i class="bi bi-check-circle me-1"></i>
+                  On-time
+                </button>
+                <button class="btn btn-sm btn-outline-warning" 
+                        (click)="openModal(r, 'late-attendee')" 
+                        title="Add Late Attendance (0.5 points)">
+                  <i class="bi bi-clock me-1"></i>
+                  Late
+                </button>
+              </div>
               <button class="btn btn-sm btn-outline-danger" 
                       (click)="deleteHistory(r)" 
                       title="Delete">
@@ -174,11 +183,20 @@
                     title="Add Loot">
               Add Loot
             </button>
-            <button class="btn btn-outline-secondary me-2" 
-                    (click)="openModal(details!, 'attendee')" 
-                    title="Add Attendance">
-              Add Attendance
-            </button>
+            <div class="btn-group me-2" role="group" aria-label="Add Attendance">
+              <button class="btn btn-outline-success" 
+                      (click)="openModal(details!, 'attendee')" 
+                      title="Add On-time Attendance (1.0 points)">
+                <i class="bi bi-check-circle me-1"></i>
+                On-time
+              </button>
+              <button class="btn btn-outline-warning" 
+                      (click)="openModal(details!, 'late-attendee')" 
+                      title="Add Late Attendance (0.5 points)">
+                <i class="bi bi-clock me-1"></i>
+                Late
+              </button>
+            </div>
             <button class="btn btn-outline-danger" 
                     (click)="deleteHistory(details!)" 
                     title="Delete Record">
@@ -188,16 +206,24 @@
         </ng-container>
         <ng-template #addForm>
           <div class="modal-header">
-            <h5 class="modal-title">{{ modalMode === 'loot' ? 'Add Loot' : 'Add Attendance' }}</h5>
+            <h5 class="modal-title">
+              {{ modalMode === 'loot' ? 'Add Loot' : 
+                 modalMode === 'attendee' ? 'Add On-time Attendance' : 
+                 'Add Late Attendance' }}
+            </h5>
             <button type="button" class="btn-close" (click)="closeModal()"></button>
           </div>
           <div class="modal-body">
-            <div class="mb-3" *ngIf="modalMode === 'loot' || modalMode === 'attendee'">
+            <div class="mb-3" *ngIf="modalMode === 'loot' || modalMode === 'attendee' || modalMode === 'late-attendee'">
               <label class="form-label small text-muted">Upload screenshot (optional)</label>
               <input type="file" accept="image/*" class="form-control" (change)="onImageSelected($event)">
               <div class="small text-muted mt-1" *ngIf="ocrLoading">Analyzing image…</div>
               <div class="small text-success mt-1" *ngIf="ocrSuggestions.length">Found {{ ocrSuggestions.length }} {{ modalMode === 'loot' ? 'loot' : 'attendee' }} candidate(s)</div>
               <div class="small text-success" *ngIf="ocrAddedCount">Added {{ ocrAddedCount }} new {{ modalMode === 'loot' ? 'loot' : 'attendee' }}(s)</div>
+              <div class="small text-info mt-1" *ngIf="modalMode === 'late-attendee'">
+                <i class="bi bi-info-circle me-1"></i>
+                Late attendees earn 0.5 points instead of 1.0 points
+              </div>
               <div class="mt-2" *ngIf="ocrSuggestions.length">
                 <div class="small text-muted mb-1">Click to use a suggestion:</div>
                 <div class="d-flex flex-wrap gap-2">
@@ -206,7 +232,11 @@
               </div>
             </div>
             <div class="mb-3">
-              <label class="form-label small text-muted">{{ modalMode === 'loot' ? 'Loot' : 'Attendee' }}</label>
+              <label class="form-label small text-muted">
+                {{ modalMode === 'loot' ? 'Loot' : 
+                   modalMode === 'attendee' ? 'On-time Attendee' : 
+                   'Late Attendee' }}
+              </label>
               <input class="form-control" [(ngModel)]="modalValue" (keyup.enter)="submitModal()">
             </div>
           </div>

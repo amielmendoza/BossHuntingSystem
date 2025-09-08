@@ -65,7 +65,7 @@ export interface AddHistoryDto {
 
 export interface MemberPointsDto {
   memberName: string;
-  points: number;
+  points: number; // Can now be decimal (0.5 for late, 1.0 for on-time)
   bossesAttended: number;
 }
 
@@ -137,6 +137,10 @@ export class BossService {
   }
   addAttendee(historyId: number, text: string): Observable<BossDefeatDto> {
     return this.http.post<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee`), { text });
+  }
+  
+  addLateAttendee(historyId: number, text: string): Observable<BossDefeatDto> {
+    return this.http.post<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee-late`), { text });
   }
   removeLoot(historyId: number, index: number): Observable<BossDefeatDto> {
     return this.http.delete<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/loot/${index}`));

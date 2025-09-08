@@ -17,7 +17,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   // Modal state
   modalOpen = false;
-  modalMode: 'loot' | 'attendee' = 'loot';
+  modalMode: 'loot' | 'attendee' | 'late-attendee' = 'loot';
   modalValue = '';
   activeRow: BossDefeatDto | null = null;
   detailsOpen = false;
@@ -72,7 +72,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
     console.log(this.details);
   }
 
-  openModal(row: BossDefeatDto, mode: 'loot' | 'attendee'): void {
+  openModal(row: BossDefeatDto, mode: 'loot' | 'attendee' | 'late-attendee'): void {
     this.activeRow = row;
     this.modalMode = mode;
     this.modalValue = '';
@@ -112,10 +112,15 @@ export class HistoryComponent implements OnInit, OnDestroy {
         },
         error: (e) => console.error('Failed to add loot', e)
       });
-    } else {
+    } else if (this.modalMode === 'attendee') {
       this.bossApi.addAttendee(row.id, text).subscribe({
         next: (updated) => { row.attendees = updated.attendees; if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees; this.closeModal(); if (this.details) { this.detailsOpen = true; } },
         error: (e) => console.error('Failed to add attendee', e)
+      });
+    } else if (this.modalMode === 'late-attendee') {
+      this.bossApi.addLateAttendee(row.id, text).subscribe({
+        next: (updated) => { row.attendees = updated.attendees; if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees; this.closeModal(); if (this.details) { this.detailsOpen = true; } },
+        error: (e) => console.error('Failed to add late attendee', e)
       });
     }
   }
@@ -130,13 +135,20 @@ export class HistoryComponent implements OnInit, OnDestroy {
     try {
       // Prefer server-side Vision AI extraction if configured
       try {
-        const ai = await firstValueFrom(this.bossApi.extractFromImage(file, this.modalMode));
+        const extractMode = this.modalMode === 'late-attendee' ? 'attendee' : this.modalMode;
+        const ai = await firstValueFrom(this.bossApi.extractFromImage(file, extractMode));
         if (this.modalMode === 'loot') {
           this.ocrSuggestions = ai.loots || [];
           if (this.activeRow && this.ocrSuggestions.length) await this.addSuggestedLoots(this.activeRow, this.ocrSuggestions);
         } else {
           this.ocrSuggestions = ai.attendees || [];
-          if (this.activeRow && this.ocrSuggestions.length) await this.addSuggestedAttendees(this.activeRow, this.ocrSuggestions);
+          if (this.activeRow && this.ocrSuggestions.length) {
+            if (this.modalMode === 'late-attendee') {
+              await this.addSuggestedLateAttendees(this.activeRow, this.ocrSuggestions);
+            } else {
+              await this.addSuggestedAttendees(this.activeRow, this.ocrSuggestions);
+            }
+          }
         }
       }
       catch {
@@ -148,7 +160,13 @@ export class HistoryComponent implements OnInit, OnDestroy {
           if (this.activeRow && this.ocrSuggestions.length) await this.addSuggestedLoots(this.activeRow, this.ocrSuggestions);
         } else {
           this.ocrSuggestions = this.parseAttendeesFromText(text);
-          if (this.activeRow && this.ocrSuggestions.length) await this.addSuggestedAttendees(this.activeRow, this.ocrSuggestions);
+          if (this.activeRow && this.ocrSuggestions.length) {
+            if (this.modalMode === 'late-attendee') {
+              await this.addSuggestedLateAttendees(this.activeRow, this.ocrSuggestions);
+            } else {
+              await this.addSuggestedAttendees(this.activeRow, this.ocrSuggestions);
+            }
+          }
         }
       }
     } catch (e) {
@@ -252,6 +270,26 @@ export class HistoryComponent implements OnInit, OnDestroy {
         this.ocrAddedCount++;
       } catch (e) {
         console.error('Add attendee failed', e);
+      }
+    }
+    if (lastUpdated && this.details && this.details.id === row.id) {
+      this.details = await firstValueFrom(this.bossApi.historyById(row.id));
+    }
+  }
+
+  private async addSuggestedLateAttendees(row: BossDefeatDto, items: string[]): Promise<void> {
+    const existing = new Set((row.attendees || []).map(x => x.toLowerCase().trim()));
+    const toAdd = items.filter(x => x && !existing.has(x.toLowerCase().trim()));
+    let lastUpdated: BossDefeatDto | null = null;
+    for (const item of toAdd) {
+      try {
+        const updated = await firstValueFrom(this.bossApi.addLateAttendee(row.id, item));
+        row.attendees = updated.attendees;
+        if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees;
+        lastUpdated = updated;
+        this.ocrAddedCount++;
+      } catch (e) {
+        console.error('Add late attendee failed', e);
       }
     }
     if (lastUpdated && this.details && this.details.id === row.id) {
