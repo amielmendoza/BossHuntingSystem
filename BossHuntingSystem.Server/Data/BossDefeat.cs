@@ -29,8 +29,12 @@ namespace BossHuntingSystem.Server.Data
         [Column(TypeName = "nvarchar(max)")]
         public string LootItemsJson { get; set; } = "[]";
         
+        // New property for detailed attendee information (includes late status)
+        [Column(TypeName = "nvarchar(max)")]
+        public string AttendeeDetailsJson { get; set; } = "[]";
+        
         [MaxLength(100)]
-        public string? Killer { get; set; }
+        public string? Owner { get; set; }
         
         // Navigation property
         [ForeignKey("BossId")]
@@ -102,11 +106,64 @@ namespace BossHuntingSystem.Server.Data
             }
             set => LootItemsJson = System.Text.Json.JsonSerializer.Serialize(value);
         }
+        
+        [NotMapped]
+        public List<AttendeeInfo> AttendeeDetails
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(AttendeeDetailsJson) || AttendeeDetailsJson == "[]")
+                {
+                    // If no detailed info exists, try to migrate from legacy Attendees list
+                    if (Attendees.Any())
+                    {
+                        return Attendees.Select(name => new AttendeeInfo 
+                        { 
+                            Name = name, 
+                            IsLate = false, 
+                            Points = 1.0m 
+                        }).ToList();
+                    }
+                    return new List<AttendeeInfo>();
+                }
+                try
+                {
+                    return System.Text.Json.JsonSerializer.Deserialize<List<AttendeeInfo>>(AttendeeDetailsJson) ?? new List<AttendeeInfo>();
+                }
+                catch
+                {
+                    // If JSON is corrupted, fallback to legacy attendees list
+                    if (Attendees.Any())
+                    {
+                        return Attendees.Select(name => new AttendeeInfo 
+                        { 
+                            Name = name, 
+                            IsLate = false, 
+                            Points = 1.0m 
+                        }).ToList();
+                    }
+                    return new List<AttendeeInfo>();
+                }
+            }
+            set
+            {
+                AttendeeDetailsJson = System.Text.Json.JsonSerializer.Serialize(value);
+                // Also update legacy Attendees property for backward compatibility
+                Attendees = value.Select(a => a.Name).ToList();
+            }
+        }
     }
     
     public class LootItem
     {
         public string Name { get; set; } = string.Empty;
         public decimal? Price { get; set; }
+    }
+    
+    public class AttendeeInfo
+    {
+        public string Name { get; set; } = string.Empty;
+        public bool IsLate { get; set; } = false;
+        public decimal Points { get; set; } = 1.0m; // 1.0 for on-time, 0.5 for late
     }
 }

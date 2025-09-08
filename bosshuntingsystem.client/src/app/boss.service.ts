@@ -11,14 +11,14 @@ export interface BossDto {
   lastKilledAt: string; // PHT (Philippine Time) from server
   nextRespawnAt: string; // PHT (Philippine Time) from server
   isAvailable: boolean;
-  killer?: string;
+  owner?: string;
 }
 
 export interface BossCreateUpdateDto {
   name: string;
   respawnHours: number;
   lastKilledAt: string | null;
-  killer?: string;
+  owner?: string;
 }
 
 export interface LootItemDto {
@@ -32,7 +32,7 @@ export interface BossDefeatDto {
   bossName: string;
   combatPower: string[];
   defeatedAtUtc: string | null; // ISO date string from server, null for history entries
-  killer?: string;
+  owner?: string;
   loots: string[];
   attendees: string[];
   lootItems?: LootItemDto[]; // New property for loot with prices
@@ -56,11 +56,38 @@ export interface CreateUpdateMemberDto {
 }
 
 export interface DefeatBossDto {
-  killer?: string;
+  owner?: string;
 }
 
 export interface AddHistoryDto {
-  killer?: string;
+  owner?: string;
+}
+
+export interface MemberPointsDto {
+  memberName: string;
+  points: number; // Can now be decimal (0.5 for late, 1.0 for on-time)
+  bossesAttended: number;
+}
+
+export interface DividendsCalculationRequest {
+  totalSales: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface MemberDividendDto {
+  memberName: string;
+  points: number;
+  dividend: number;
+}
+
+export interface DividendsCalculationResult {
+  totalSales: number;
+  totalPoints: number;
+  periodStart?: string;
+  periodEnd?: string;
+  memberDividends: MemberDividendDto[];
+  calculatedAt: string;
 }
 
 
@@ -93,12 +120,12 @@ export class BossService {
   getById(id: number): Observable<BossDto> { return this.http.get<BossDto>(this.url(`/api/bosses/${id}`)); }
   create(payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.post<BossDto>(this.url('/api/bosses'), payload); }
   update(id: number, payload: BossCreateUpdateDto): Observable<BossDto> { return this.http.put<BossDto>(this.url(`/api/bosses/${id}`), payload); }
-  defeat(id: number, killer?: string): Observable<BossDto> {
-    const payload = killer ? { killer } : {};
+  defeat(id: number, owner?: string): Observable<BossDto> {
+    const payload = owner ? { owner } : {};
     return this.http.post<BossDto>(this.url(`/api/bosses/${id}/defeat`), payload)
       .pipe(tap(() => this.historyUpdated.next()));
   }
-  addHistory(id: number, payload?: { killer?: string; defeatedAt?: string }): Observable<BossDefeatDto> {
+  addHistory(id: number, payload?: { owner?: string; defeatedAt?: string }): Observable<BossDefeatDto> {
     const requestPayload = payload || {};
     return this.http.post<BossDefeatDto>(this.url(`/api/bosses/${id}/add-history`), requestPayload)
       .pipe(tap(() => this.historyUpdated.next()));
@@ -110,6 +137,10 @@ export class BossService {
   }
   addAttendee(historyId: number, text: string): Observable<BossDefeatDto> {
     return this.http.post<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee`), { text });
+  }
+  
+  addLateAttendee(historyId: number, text: string): Observable<BossDefeatDto> {
+    return this.http.post<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee-late`), { text });
   }
   removeLoot(historyId: number, index: number): Observable<BossDefeatDto> {
     return this.http.delete<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/loot/${index}`));
@@ -173,6 +204,16 @@ export class BossService {
 
   sendManualNotification(message: string): Observable<any> {
     return this.http.post(this.url('/api/bosses/notify'), { message });
+  }
+
+  // Get member points from attendance tracking
+  getMemberPoints(): Observable<MemberPointsDto[]> {
+    return this.http.get<MemberPointsDto[]>(this.url('/api/bosses/points'));
+  }
+
+  // Calculate dividends based on total sales and member points
+  calculateDividends(request: DividendsCalculationRequest): Observable<DividendsCalculationResult> {
+    return this.http.post<DividendsCalculationResult>(this.url('/api/bosses/calculate-dividends'), request);
   }
 
 

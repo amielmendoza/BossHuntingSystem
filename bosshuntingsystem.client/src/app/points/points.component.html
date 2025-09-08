@@ -1,0 +1,331 @@
+<div class="cardx span-12 animate-fade-in">
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="header-section">
+      <h2 class="card-title mb-2">
+        <i class="bi bi-trophy-fill text-warning me-2"></i>
+        Member Points System
+      </h2>
+      <p class="card-subtitle text-muted mb-0">Track guild member performance and calculate profit sharing</p>
+    </div>
+    <div class="action-buttons d-flex gap-2">
+      <button class="btn btn-success btn-modern hover-lift button-press" (click)="toggleDividendsCalculator()" title="Calculate Dividends">
+        <i class="bi bi-calculator me-1"></i>
+        <span class="d-none d-sm-inline">Calculate Dividends</span>
+      </button>
+      <button class="btn btn-outline-primary btn-modern hover-lift button-press" (click)="refreshPoints()" title="Refresh points data">
+        <i class="bi bi-arrow-clockwise me-1" [class.animate-spin]="loading"></i>
+        <span class="d-none d-sm-inline">Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state text-center py-5">
+    <div class="spinner-border text-primary mb-3" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mb-0">Loading member points data...</p>
+  </div>
+  
+  <!-- Points Leaderboard -->
+  <div class="table-container" *ngIf="!loading">
+    <div class="table-responsive">
+      <table class="table points-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="rank-column">Rank</th>
+            <th class="member-column">Member</th>
+            <th class="points-column">Points</th>
+            <th class="attendance-column">Battles</th>
+            <th class="performance-column">Performance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let member of memberPoints; let i = index" class="member-row animate-slide-in" [class.top-performer]="i < 3" [style.animation-delay.s]="i * 0.1">
+            <td class="rank-cell">
+              <div class="rank-badge" [ngClass]="{
+                'rank-gold': i === 0,
+                'rank-silver': i === 1,
+                'rank-bronze': i === 2,
+                'rank-default': i > 2
+              }">
+                <span class="rank-number">{{ i + 1 }}</span>
+                <span class="rank-icon" *ngIf="i < 3">
+                  <i class="bi bi-trophy-fill" *ngIf="i === 0"></i>
+                  <i class="bi bi-award-fill" *ngIf="i === 1"></i>
+                  <i class="bi bi-medal-fill" *ngIf="i === 2"></i>
+                </span>
+              </div>
+            </td>
+            <td class="member-cell">
+              <div class="member-info">
+                <div class="member-avatar">
+                  {{ member.memberName.charAt(0).toUpperCase() }}
+                </div>
+                <div class="member-details">
+                  <div class="member-name">{{ member.memberName }}</div>
+                  <div class="member-status" *ngIf="i < 3">Top Performer</div>
+                </div>
+              </div>
+            </td>
+            <td class="points-cell">
+              <div class="points-display">
+                <span class="points-value">{{ member.points }}</span>
+                <span class="points-label">pts</span>
+              </div>
+            </td>
+            <td class="attendance-cell">
+              <div class="attendance-info">
+                <span class="attendance-count">{{ member.bossesAttended }}</span>
+                <span class="attendance-label">battles</span>
+              </div>
+            </td>
+            <td class="performance-cell">
+              <div class="performance-indicator">
+                <div class="progress-bar">
+                  <div class="progress-fill" [style.width.%]="getPerformancePercentage(member.points)"></div>
+                </div>
+                <span class="performance-percentage">{{ getPerformancePercentage(member.points) | number:'1.0-0' }}%</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Empty State -->
+    <div class="empty-state text-center py-5" *ngIf="memberPoints.length === 0">
+      <div class="empty-state-icon mb-3">
+        <i class="bi bi-trophy text-muted" style="font-size: 3rem;"></i>
+      </div>
+      <h5 class="empty-state-title">No Points Data Yet</h5>
+      <p class="text-muted mb-3">Points are earned by attending boss battles. Get started by recording your first battle!</p>
+      <button class="btn btn-primary btn-modern hover-glow button-press">
+        <i class="bi bi-plus-circle me-1"></i>
+        Record First Battle
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick Stats Cards -->
+  <div class="stats-grid mt-4 stagger-animation" *ngIf="memberPoints.length > 0">
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-primary-subtle text-primary">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ memberPoints.length }}</div>
+        <div class="stat-label">Active Members</div>
+      </div>
+    </div>
+    
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-success-subtle text-success">
+        <i class="bi bi-trophy-fill"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getTotalPoints() }}</div>
+        <div class="stat-label">Total Points</div>
+      </div>
+    </div>
+    
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-warning-subtle text-warning">
+        <i class="bi bi-star-fill"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getAveragePoints() | number:'1.1-1' }}</div>
+        <div class="stat-label">Avg Points</div>
+      </div>
+    </div>
+    
+    <div class="stat-card hover-lift">
+      <div class="stat-icon bg-info-subtle text-info">
+        <i class="bi bi-graph-up"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-number">{{ getHighestScore() }}</div>
+        <div class="stat-label">Highest Score</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Points Information Card -->
+  <div class="info-card mt-4">
+    <div class="info-header">
+      <h6 class="info-title">
+        <i class="bi bi-info-circle me-2"></i>
+        How Points Work
+      </h6>
+    </div>
+    <div class="info-content">
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-plus-circle text-success"></i>
+          </div>
+          <div class="info-text">
+            <strong>Earn Points:</strong> Each boss battle attendance = 1 point
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-calculator text-primary"></i>
+          </div>
+          <div class="info-text">
+            <strong>Auto Calculation:</strong> Points calculated from battle history
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-arrow-up text-warning"></i>
+          </div>
+          <div class="info-text">
+            <strong>Live Rankings:</strong> Updated when new battles are recorded
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="bi bi-sort-down text-info"></i>
+          </div>
+          <div class="info-text">
+            <strong>Sorting:</strong> Ranked by total points, then alphabetically
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dividends Calculator -->
+  <div class="mt-4 border rounded" *ngIf="showDividendsCalculator">
+    <div class="p-3 bg-primary-subtle border-bottom">
+      <h6 class="mb-1">
+        <i class="bi bi-calculator"></i> Dividends Calculator
+      </h6>
+      <div class="small text-muted">Calculate member dividends based on total sales and points earned</div>
+    </div>
+    
+    <div class="p-3">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label for="totalSales" class="form-label">Total Sales Amount *</label>
+          <div class="input-group">
+            <span class="input-group-text">₱</span>
+            <input 
+              type="number" 
+              class="form-control" 
+              id="totalSales" 
+              [(ngModel)]="totalSales"
+              placeholder="0.00"
+              step="0.01"
+              min="0">
+          </div>
+        </div>
+        
+        <div class="col-md-3">
+          <label for="startDate" class="form-label">Start Date (Optional)</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="startDate" 
+            [(ngModel)]="startDate">
+        </div>
+        
+        <div class="col-md-3">
+          <label for="endDate" class="form-label">End Date (Optional)</label>
+          <input 
+            type="date" 
+            class="form-control" 
+            id="endDate" 
+            [(ngModel)]="endDate">
+        </div>
+        
+        <div class="col-md-2 d-flex align-items-end">
+          <button 
+            class="btn btn-primary w-100"
+            (click)="calculateDividends()"
+            [disabled]="calculatingDividends || !totalSales || totalSales <= 0">
+            <span *ngIf="calculatingDividends" class="spinner-border spinner-border-sm me-2"></span>
+            <i class="bi bi-play-fill" *ngIf="!calculatingDividends"></i>
+            Calculate
+          </button>
+        </div>
+      </div>
+      
+      <div class="small text-muted mt-2">
+        <i class="bi bi-info-circle"></i>
+        Formula: Dividend = (Total Sales ÷ Total Points) × Member Points
+      </div>
+    </div>
+
+    <!-- Dividends Results -->
+    <div class="border-top" *ngIf="dividendsResult">
+      <div class="p-3 bg-success-subtle border-bottom">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="small text-muted">Total Sales</div>
+            <div class="fw-bold">₱{{ dividendsResult.totalSales | number:'1.2-2' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted">Total Points</div>
+            <div class="fw-bold">{{ dividendsResult.totalPoints }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted">Rate per Point</div>
+            <div class="fw-bold">₱{{ (dividendsResult.totalSales / dividendsResult.totalPoints) | number:'1.2-2' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted">Total Dividends</div>
+            <div class="fw-bold text-success">₱{{ getTotalDividends() | number:'1.2-2' }}</div>
+          </div>
+        </div>
+        
+        <div class="small text-muted mt-2" *ngIf="dividendsResult.periodStart || dividendsResult.periodEnd">
+          <i class="bi bi-calendar-range"></i>
+          Period: 
+          <span *ngIf="dividendsResult.periodStart">{{ dividendsResult.periodStart | date:'short' }}</span>
+          <span *ngIf="!dividendsResult.periodStart">Beginning</span>
+          to 
+          <span *ngIf="dividendsResult.periodEnd">{{ dividendsResult.periodEnd | date:'short' }}</span>
+          <span *ngIf="!dividendsResult.periodEnd">Now</span>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:50px">#</th>
+              <th>Member Name</th>
+              <th>Points</th>
+              <th>Dividend Amount</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let member of dividendsResult.memberDividends; let i = index">
+              <td class="text-muted">{{ i + 1 }}</td>
+              <td class="it-title">{{ member.memberName }}</td>
+              <td>
+                <span class="badge text-bg-primary">{{ member.points }}</span>
+              </td>
+              <td class="fw-bold text-success">₱{{ member.dividend | number:'1.2-2' }}</td>
+              <td class="text-muted">
+                {{ (member.dividend / dividendsResult.totalSales * 100) | number:'1.1-1' }}%
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="p-3 bg-light text-center">
+        <button class="btn btn-outline-success btn-sm me-2" onclick="window.print()">
+          <i class="bi bi-printer"></i> Print Results
+        </button>
+        <button class="btn btn-outline-primary btn-sm" (click)="dividendsResult = null">
+          <i class="bi bi-x-circle"></i> Clear Results
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

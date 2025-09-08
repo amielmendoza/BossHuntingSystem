@@ -1,0 +1,512 @@
+/* Modern Points Component Styles */
+
+/* Header Section */
+.header-section {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.card-subtitle {
+  font-size: 0.95rem;
+  color: var(--gray-500);
+  line-height: 1.4;
+}
+
+/* Action Buttons */
+.action-buttons {
+  flex-shrink: 0;
+}
+
+.btn-modern {
+  font-weight: 500;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  border: none;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-modern:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-success.btn-modern {
+  background: linear-gradient(135deg, var(--success-500), #059669);
+  color: white;
+}
+
+.btn-outline-primary.btn-modern {
+  border: 1px solid var(--primary-500);
+  color: var(--primary-500);
+  background: transparent;
+}
+
+.btn-outline-primary.btn-modern:hover {
+  background: var(--primary-500);
+  color: white;
+}
+
+/* Loading State */
+.loading-state {
+  padding: 4rem 2rem;
+}
+
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Table Styling */
+.table-container {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.points-table {
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.points-table thead {
+  background: linear-gradient(135deg, var(--gray-50), #f8fafc);
+}
+
+.points-table thead th {
+  border: none;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-600);
+  padding: 1.25rem 1.5rem;
+  position: relative;
+}
+
+.points-table thead th::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gray-200);
+}
+
+.points-table tbody td {
+  border-top: 1px solid var(--gray-100);
+  padding: 1.25rem 1.5rem;
+  vertical-align: middle;
+}
+
+.member-row {
+  transition: all 0.2s ease;
+}
+
+.member-row:hover {
+  background: var(--gray-50);
+  transform: translateX(2px);
+}
+
+.member-row.top-performer {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.02));
+}
+
+.member-row.top-performer:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+/* Column Widths */
+.rank-column { width: 80px; }
+.member-column { width: 35%; }
+.points-column { width: 15%; }
+.attendance-column { width: 15%; }
+.performance-column { width: 25%; }
+
+/* Rank Badge */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  min-width: 60px;
+  justify-content: center;
+}
+
+.rank-gold {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.rank-silver {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  color: white;
+  box-shadow: 0 2px 8px rgba(148, 163, 184, 0.3);
+}
+
+.rank-bronze {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: white;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.rank-default {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border: 1px solid var(--gray-200);
+}
+
+.rank-icon {
+  font-size: 1rem;
+}
+
+/* Member Info */
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.member-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.member-details {
+  flex: 1;
+}
+
+.member-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--gray-900);
+  margin-bottom: 0.125rem;
+}
+
+.member-status {
+  font-size: 0.75rem;
+  color: var(--warning-600);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Points Display */
+.points-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.points-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+.points-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+/* Attendance Info */
+.attendance-info {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.attendance-count {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.attendance-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+/* Performance Indicator */
+.performance-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--success-500));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.performance-percentage {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 4rem 2rem;
+}
+
+.empty-state-icon {
+  opacity: 0.6;
+}
+
+.empty-state-title {
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-200);
+}
+
+.stat-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.bg-primary-subtle {
+  background-color: var(--primary-50) !important;
+}
+
+.bg-success-subtle {
+  background-color: var(--success-50) !important;
+}
+
+.bg-warning-subtle {
+  background-color: var(--warning-50) !important;
+}
+
+.bg-info-subtle {
+  background-color: #eff6ff !important;
+}
+
+.text-info {
+  color: #0ea5e9 !important;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-number {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+/* Info Card */
+.info-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.info-header {
+  background: linear-gradient(135deg, var(--gray-50), #f8fafc);
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.info-title {
+  color: var(--gray-800);
+  font-weight: 600;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.info-content {
+  padding: 1.5rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.info-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background: var(--gray-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.info-text {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--gray-600);
+}
+
+.info-text strong {
+  color: var(--gray-800);
+  font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card-title {
+    font-size: 1.5rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .btn-modern {
+    justify-content: center;
+  }
+  
+  .points-table thead th,
+  .points-table tbody td {
+    padding: 1rem 0.75rem;
+  }
+  
+  .member-info {
+    gap: 0.75rem;
+  }
+  
+  .member-avatar {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.875rem;
+  }
+  
+  .points-value {
+    font-size: 1.25rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .performance-column {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .attendance-column {
+    display: none;
+  }
+  
+  .member-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

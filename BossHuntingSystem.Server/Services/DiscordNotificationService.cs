@@ -6,7 +6,7 @@ namespace BossHuntingSystem.Server.Services
 {
     public interface IDiscordNotificationService
     {
-        Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn);
+        Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn, string? owner = null);
         Task SendManualNotificationAsync(string message);
     }
 
@@ -23,7 +23,7 @@ namespace BossHuntingSystem.Server.Services
             _logger = logger;
         }
 
-        public async Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn)
+        public async Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn, string? owner = null)
         {
             var webhookUrl = _configuration["DISCORD_WEBHOOK_URL"];
             if (string.IsNullOrEmpty(webhookUrl))
@@ -34,7 +34,7 @@ namespace BossHuntingSystem.Server.Services
 
             try
             {
-                var message = CreateBossNotificationMessage(bossName, minutesUntilRespawn);
+                var message = CreateBossNotificationMessage(bossName, minutesUntilRespawn, owner);
                 var json = JsonSerializer.Serialize(message, new JsonSerializerOptions 
                 { 
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -46,7 +46,8 @@ namespace BossHuntingSystem.Server.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Discord notification sent for {BossName} ({Minutes} minutes)", bossName, minutesUntilRespawn);
+                    _logger.LogInformation("Discord notification sent for {BossName} ({Minutes} minutes) owned by {Owner}", 
+                        bossName, minutesUntilRespawn, owner ?? "Unknown");
                 }
                 else
                 {
@@ -60,7 +61,7 @@ namespace BossHuntingSystem.Server.Services
             }
         }
 
-        private DiscordWebhookMessage CreateBossNotificationMessage(string bossName, int minutesUntilRespawn)
+        private DiscordWebhookMessage CreateBossNotificationMessage(string bossName, int minutesUntilRespawn, string? owner = null)
         {
             var color = minutesUntilRespawn switch
             {
@@ -87,31 +88,49 @@ namespace BossHuntingSystem.Server.Services
             // Add @everyone for urgent notifications (1 and 5 minutes)
             var mention = (minutesUntilRespawn <= 5) ? "@everyone " : "";
 
+            // Build owner text
+            var ownerText = !string.IsNullOrWhiteSpace(owner) ? $" (Owned by **{owner}**)" : "";
+            var ownerDescription = !string.IsNullOrWhiteSpace(owner) ? $"\n**Owned by:** {owner}" : "";
+
+            // Create fields list
+            var fields = new List<DiscordEmbedField>
+            {
+                new DiscordEmbedField
+                {
+                    Name = "⏰ Time Remaining",
+                    Value = timeText,
+                    Inline = true
+                },
+                new DiscordEmbedField
+                {
+                    Name = "🐉 Boss Name",
+                    Value = bossName,
+                    Inline = true
+                }
+            };
+
+            // Add owner field if owner exists
+            if (!string.IsNullOrWhiteSpace(owner))
+            {
+                fields.Add(new DiscordEmbedField
+                {
+                    Name = "👑 Owned By",
+                    Value = owner,
+                    Inline = true
+                });
+            }
+
             return new DiscordWebhookMessage
             {
-                Content = $"{mention}{urgencyText} **{bossName}** respawning in **{timeText}**! @everyone",
+                Content = $"{mention}{urgencyText} **{bossName}**{ownerText} respawning in **{timeText}**! @everyone",
                 Embeds = new[]
                 {
                     new DiscordEmbed
                     {
                         Title = $"🐉 {bossName}",
-                        Description = $"**Respawns in:** {timeText}",
+                        Description = $"**Respawns in:** {timeText}{ownerDescription}",
                         Color = color,
-                        Fields = new[]
-                        {
-                            new DiscordEmbedField
-                            {
-                                Name = "⏰ Time Remaining",
-                                Value = timeText,
-                                Inline = true
-                            },
-                            new DiscordEmbedField
-                            {
-                                Name = "🐉 Boss Name",
-                                Value = bossName,
-                                Inline = true
-                            }
-                        },
+                        Fields = fields.ToArray(),
                         Footer = new DiscordEmbedFooter
                         {
                             Text = "Boss Hunting System"

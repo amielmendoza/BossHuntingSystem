@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 
 namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    [Authorize(Policy = "User")] // Require authentication for weather forecast
     public class WeatherForecastController : ControllerBase
     {
         private static readonly string[] Summaries = new[]

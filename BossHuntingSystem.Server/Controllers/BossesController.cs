@@ -4,15 +4,12 @@ using BossHuntingSystem.Server.Data;
 using BossHuntingSystem.Server.Services;
 using BossHuntingSystem.Server.Models;
 using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Authorization;
-using BossHuntingSystem.Server.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Policy = "User")] // Require authentication for all endpoints
     public class BossesController : ControllerBase
     {
         private readonly BossHuntingDbContext _context;
@@ -63,7 +60,7 @@ namespace BossHuntingSystem.Server.Controllers
                 LastKilledAt = lastKilledAtPht,
                 NextRespawnAt = nextRespawnAtPht,
                 IsAvailable = nextRespawnAtPht <= currentPht,
-                Killer = boss.Killer
+                Owner = boss.Owner
             };
         }
 
@@ -74,7 +71,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "ReadOnly")] // Require authentication to view bosses
         public async Task<ActionResult<IEnumerable<BossResponseDto>>> GetAll()
         {
             try
@@ -102,7 +98,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("history")]
-        [Authorize(Policy = "ReadOnly")] // Require authentication to view history
         public async Task<ActionResult<IEnumerable<BossDefeat>>> GetHistory()
         {
             try
@@ -127,7 +122,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("history/{id:int}")]
-        [Authorize(Policy = "ReadOnly")] // Require authentication for individual history records
         public async Task<ActionResult<BossDefeat>> GetHistoryById(int id)
         {
             try
@@ -150,7 +144,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("{id:int}")]
-        [Authorize(Policy = "ReadOnly")] // Require authentication for individual boss details
         public async Task<ActionResult<BossResponseDto>> GetById(int id)
         {
             try
@@ -173,7 +166,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpPost]
-        [Authorize(Policy = "BossManagement")] // Only admins can create bosses
         public async Task<ActionResult<BossResponseDto>> Create([FromBody] BossCreateUpdateDto dto)
         {
             Console.WriteLine($"[Create] Received request: Name='{dto?.Name}', RespawnHours={dto?.RespawnHours}, LastKilledAt='{dto?.LastKilledAt}'");
@@ -224,7 +216,7 @@ namespace BossHuntingSystem.Server.Controllers
                     Name = dto.Name.Trim(),
                     RespawnHours = dto.RespawnHours,
                     LastKilledAt = lastKilledAtUtc,
-                    Killer = dto.Killer?.Trim()
+                    Owner = dto.Owner?.Trim()
                 };
 
                 _context.Bosses.Add(boss);
@@ -247,7 +239,6 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize(Policy = "BossManagement")] // Only admins can update bosses
         public async Task<ActionResult<BossResponseDto>> Update(int id, [FromBody] BossCreateUpdateDto dto)
         {
             if (dto == null) return BadRequest("Request body is required");
@@ -282,8 +273,8 @@ namespace BossHuntingSystem.Server.Controllers
 
                 existing.Name = dto.Name.Trim();
                 existing.RespawnHours = dto.RespawnHours;
-                existing.LastKilledAt = lastKilledAtUtc.AddHours(-8);
-                existing.Killer = dto.Killer?.Trim();
+                existing.LastKilledAt = lastKilledAtUtc; // Store as UTC, no conversion needed
+                existing.Owner = dto.Owner?.Trim();
 
                 await _context.SaveChangesAsync();
                 
@@ -302,47 +293,43 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize(Policy = "BossManagement")] // Only admins can delete bosses
         public async Task<IActionResult> Delete(int id)
         {
-            var username = User.GetUsername();
-            _logger.LogInformation("User {Username} attempting to delete boss {Id}", username, id);
+            _logger.LogInformation("Attempting to delete boss {Id}", id);
 
             try
             {
                 var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null)
                 {
-                    _logger.LogWarning("User {Username} attempted to delete non-existent boss {Id}", username, id);
+                    _logger.LogWarning("Attempted to delete non-existent boss {Id}", id);
                     return NotFound();
                 }
 
                 _context.Bosses.Remove(existing);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User {Username} successfully deleted boss {Id} with name {Name}", username, id, existing.Name);
+                _logger.LogInformation("Successfully deleted boss {Id} with name {Name}", id, existing.Name);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "User {Username} failed to delete boss {Id}", username, id);
+                _logger.LogError(ex, "Failed to delete boss {Id}", id);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("{id:int}/defeat")]
-        [Authorize(Policy = "BossManagement")] // Only admins can record boss defeats
         public async Task<ActionResult<BossResponseDto>> Defeat(int id, [FromBody] DefeatBossDto? dto = null)
         {
-            var username = User.GetUsername();
-            _logger.LogInformation("User {Username} attempting to record defeat for boss {Id}", username, id);
+            _logger.LogInformation("Attempting to record defeat for boss {Id}", id);
 
             try
             {
                 var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null) 
                 {
-                    _logger.LogWarning("User {Username} attempted to record defeat for non-existent boss {Id}", username, id);
+                    _logger.LogWarning("Attempted to record defeat for non-existent boss {Id}", id);
                     return NotFound();
                 }
 
@@ -350,7 +337,7 @@ namespace BossHuntingSystem.Server.Controllers
                 // Use the same timezone handling as other methods for consistency
                 var currentUtc = DateTime.UtcNow;
                 existing.LastKilledAt = currentUtc;
-                existing.Killer = dto?.Killer?.Trim();
+                existing.Owner = dto?.Owner?.Trim();
 
                 var defeat = new BossDefeat
                 {
@@ -364,7 +351,7 @@ namespace BossHuntingSystem.Server.Controllers
                 _context.BossDefeats.Add(defeat);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User {Username} successfully recorded defeat for boss {Id} with name {Name}", username, id, existing.Name);
+                _logger.LogInformation("Successfully recorded defeat for boss {Id} with name {Name}", id, existing.Name);
 
                 // Add cache control headers to prevent caching
                 Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
@@ -375,7 +362,7 @@ namespace BossHuntingSystem.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "User {Username} failed to record defeat for boss {Id}", username, id);
+                _logger.LogError(ex, "Failed to record defeat for boss {Id}", id);
                 return StatusCode(500, "Database error occurred");
             }
         }
@@ -418,7 +405,7 @@ namespace BossHuntingSystem.Server.Controllers
                     BossId = existing.Id,
                     BossName = existing.Name,
                     DefeatedAtUtc = defeatedAtUtc,
-                    Killer = dto?.Killer?.Trim(),
+                    Owner = dto?.Owner?.Trim(),
                     LootsJson = "[]",
                     AttendeesJson = "[]"
                 };
@@ -489,9 +476,23 @@ namespace BossHuntingSystem.Server.Controllers
                 if (record == null) return NotFound();
 
                 var attendeeName = dto.Text.Trim();
-                var attendees = record.Attendees;
-                attendees.Add(attendeeName);
-                record.Attendees = attendees;
+                
+                // Add to new attendee details system (default: not late, 1.0 points)
+                var attendeeDetails = record.AttendeeDetails;
+                
+                // Check if attendee already exists
+                if (attendeeDetails.Any(a => a.Name.Equals(attendeeName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return BadRequest("Attendee already exists");
+                }
+                
+                attendeeDetails.Add(new Data.AttendeeInfo
+                {
+                    Name = attendeeName,
+                    IsLate = false,
+                    Points = 1.0m
+                });
+                record.AttendeeDetails = attendeeDetails;
 
                 await _context.SaveChangesAsync();
                 
@@ -505,6 +506,51 @@ namespace BossHuntingSystem.Server.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"[AddAttendee] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
+        
+        [HttpPost("history/{id:int}/attendee-late")]
+        public async Task<ActionResult<BossDefeat>> AddLateAttendee(int id, [FromBody] AddTextDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Text)) return BadRequest("Text is required");
+
+            try
+            {
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var attendeeName = dto.Text.Trim();
+                
+                // Add to new attendee details system (late: 0.5 points)
+                var attendeeDetails = record.AttendeeDetails;
+                
+                // Check if attendee already exists
+                if (attendeeDetails.Any(a => a.Name.Equals(attendeeName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return BadRequest("Attendee already exists");
+                }
+                
+                attendeeDetails.Add(new Data.AttendeeInfo
+                {
+                    Name = attendeeName,
+                    IsLate = true,
+                    Points = 0.5m
+                });
+                record.AttendeeDetails = attendeeDetails;
+
+                await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AddLateAttendee] Error: {ex.Message}");
                 return StatusCode(500, "Database error occurred");
             }
         }
@@ -608,60 +654,210 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpDelete("history/{id:int}")]
-        [Authorize(Policy = "BossManagement")] // Only admins can delete history records
         public async Task<IActionResult> DeleteHistory(int id)
         {
-            var username = User.GetUsername();
-            _logger.LogInformation("User {Username} attempting to delete boss history record {Id}", username, id);
+            _logger.LogInformation("Attempting to delete boss history record {Id}", id);
 
             try
             {
                 var record = await _context.BossDefeats.FindAsync(id);
                 if (record == null)
                 {
-                    _logger.LogWarning("User {Username} attempted to delete non-existent boss history record {Id}", username, id);
+                    _logger.LogWarning("Attempted to delete non-existent boss history record {Id}", id);
                     return NotFound();
                 }
 
                 _context.BossDefeats.Remove(record);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User {Username} successfully deleted boss history record {Id}", username, id);
+                _logger.LogInformation("Successfully deleted boss history record {Id}", id);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "User {Username} failed to delete boss history record {Id}", username, id);
+                _logger.LogError(ex, "Failed to delete boss history record {Id}", id);
                 return StatusCode(500, "Database error occurred");
             }
         }
 
         [HttpPost("notify")]
-        [Authorize(Policy = "Notifications")] // Only admins can send manual notifications
         public async Task<IActionResult> SendManualNotification([FromBody] ManualNotificationDto dto)
         {
-            var username = User.GetUsername();
-            _logger.LogInformation("User {Username} attempting to send manual notification for boss {BossName}", username, dto?.BossName);
+            _logger.LogInformation("Attempting to send manual notification for boss {BossName}", dto?.BossName);
 
             if (dto == null || string.IsNullOrWhiteSpace(dto.BossName))
             {
-                _logger.LogWarning("User {Username} attempted to send manual notification with invalid data", username);
+                _logger.LogWarning("Attempted to send manual notification with invalid data");
                 return BadRequest("Boss name is required");
             }
 
             try
             {
-                await _discordService.SendBossNotificationAsync(dto.BossName, dto.MinutesUntilRespawn ?? 5);
+                await _discordService.SendBossNotificationAsync(dto.BossName, dto.MinutesUntilRespawn ?? 5, dto.Owner);
                 
-                _logger.LogInformation("User {Username} successfully sent manual notification for boss {BossName}", username, dto.BossName);
+                _logger.LogInformation("Successfully sent manual notification for boss {BossName} owned by {Owner}", dto.BossName, dto.Owner ?? "Unknown");
                 
                 return Ok(new { message = "Notification sent successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "User {Username} failed to send manual notification for boss {BossName}", username, dto.BossName);
+                _logger.LogError(ex, "Failed to send manual notification for boss {BossName}", dto.BossName);
                 return StatusCode(500, "Failed to send notification");
             }
+        }
+
+        [HttpGet("points")]
+        public async Task<ActionResult<IEnumerable<MemberPointsDto>>> GetMemberPoints()
+        {
+            try
+            {
+                // Get all boss defeats with attendance data
+                var defeats = await _context.BossDefeats.ToListAsync();
+                
+                // Dictionary to track points for each member (now using decimal for late attendance)
+                var memberPoints = new Dictionary<string, decimal>();
+                var memberBattleCount = new Dictionary<string, int>();
+                
+                foreach (var defeat in defeats)
+                {
+                    // Use new AttendeeDetails if available, otherwise fallback to legacy Attendees
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    
+                    foreach (var attendeeInfo in attendeeDetails)
+                    {
+                        if (!string.IsNullOrWhiteSpace(attendeeInfo.Name))
+                        {
+                            var attendeeName = attendeeInfo.Name;
+                            var points = attendeeInfo.IsLate ? 0.5m : 1.0m;
+                            
+                            if (memberPoints.ContainsKey(attendeeName))
+                            {
+                                memberPoints[attendeeName] += points;
+                                memberBattleCount[attendeeName]++;
+                            }
+                            else
+                            {
+                                memberPoints[attendeeName] = points;
+                                memberBattleCount[attendeeName] = 1;
+                            }
+                        }
+                    }
+                }
+                
+                // Convert to DTO and sort by points descending
+                var result = memberPoints
+                    .Select(kvp => new MemberPointsDto
+                    {
+                        MemberName = kvp.Key,
+                        Points = kvp.Value,
+                        BossesAttended = memberBattleCount.ContainsKey(kvp.Key) ? memberBattleCount[kvp.Key] : 0
+                    })
+                    .OrderByDescending(mp => mp.Points)
+                    .ThenBy(mp => mp.MemberName)
+                    .ToList();
+                
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting member points");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPost("calculate-dividends")]
+        public async Task<ActionResult<DividendsCalculationResult>> CalculateDividends([FromBody] DividendsCalculationRequest request)
+        {
+            if (request == null || request.TotalSales <= 0)
+            {
+                return BadRequest("Total sales must be greater than 0");
+            }
+
+            try
+            {
+                // Get member points for the specified time range or all time
+                var defeats = await GetDefeatsByDateRange(request.StartDate, request.EndDate);
+                
+                // Calculate member points from defeats (using new decimal system)
+                var memberPoints = new Dictionary<string, decimal>();
+                
+                foreach (var defeat in defeats)
+                {
+                    // Use new AttendeeDetails if available, otherwise fallback to legacy Attendees
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    
+                    foreach (var attendeeInfo in attendeeDetails)
+                    {
+                        if (!string.IsNullOrWhiteSpace(attendeeInfo.Name))
+                        {
+                            var attendeeName = attendeeInfo.Name;
+                            var points = attendeeInfo.IsLate ? 0.5m : 1.0m;
+                            
+                            if (memberPoints.ContainsKey(attendeeName))
+                            {
+                                memberPoints[attendeeName] += points;
+                            }
+                            else
+                            {
+                                memberPoints[attendeeName] = points;
+                            }
+                        }
+                    }
+                }
+
+                var totalPoints = memberPoints.Values.Sum();
+                
+                if (totalPoints == 0)
+                {
+                    return BadRequest("No members with points found for the specified period");
+                }
+
+                // Calculate dividends using the formula: Dividend = (Total Sales / Total Points) × Player's Points
+                var dividends = memberPoints
+                    .Select(kvp => new MemberDividendDto
+                    {
+                        MemberName = kvp.Key,
+                        Points = kvp.Value,
+                        Dividend = Math.Round((request.TotalSales / totalPoints) * kvp.Value, 2)
+                    })
+                    .OrderByDescending(d => d.Dividend)
+                    .ThenBy(d => d.MemberName)
+                    .ToList();
+
+                var result = new DividendsCalculationResult
+                {
+                    TotalSales = request.TotalSales,
+                    TotalPoints = totalPoints,
+                    PeriodStart = request.StartDate,
+                    PeriodEnd = request.EndDate,
+                    MemberDividends = dividends,
+                    CalculatedAt = DateTime.UtcNow
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating dividends");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        private async Task<List<BossDefeat>> GetDefeatsByDateRange(DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.BossDefeats.AsQueryable();
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(d => d.DefeatedAtUtc >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(d => d.DefeatedAtUtc <= endDate.Value);
+            }
+
+            return await query.ToListAsync();
         }
 
 
@@ -673,13 +869,14 @@ namespace BossHuntingSystem.Server.Controllers
         public string Name { get; set; } = string.Empty;
         public int RespawnHours { get; set; }
         public string? LastKilledAt { get; set; }
-        public string? Killer { get; set; }
+        public string? Owner { get; set; }
     }
 
     public class ManualNotificationDto
     {
         public string BossName { get; set; } = string.Empty;
         public int? MinutesUntilRespawn { get; set; }
+        public string? Owner { get; set; }
     }
 
     public class BossResponseDto
@@ -690,7 +887,7 @@ namespace BossHuntingSystem.Server.Controllers
         public DateTime LastKilledAt { get; set; } // This will be in PHT (Philippine Time)
         public DateTime NextRespawnAt { get; set; } // This will be in PHT (Philippine Time)
         public bool IsAvailable { get; set; }
-        public string? Killer { get; set; }
+        public string? Owner { get; set; }
     }
 
     public class AddTextDto
@@ -712,12 +909,43 @@ namespace BossHuntingSystem.Server.Controllers
     
     public class DefeatBossDto
     {
-        public string? Killer { get; set; }
+        public string? Owner { get; set; }
     }
     
     public class AddHistoryDto
     {
-        public string? Killer { get; set; }
+        public string? Owner { get; set; }
         public string? DefeatedAt { get; set; } // Optional custom defeated time in PHT
+    }
+    
+    public class MemberPointsDto
+    {
+        public string MemberName { get; set; } = string.Empty;
+        public decimal Points { get; set; }
+        public int BossesAttended { get; set; }
+    }
+
+    public class DividendsCalculationRequest
+    {
+        public decimal TotalSales { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+    }
+
+    public class MemberDividendDto
+    {
+        public string MemberName { get; set; } = string.Empty;
+        public decimal Points { get; set; }
+        public decimal Dividend { get; set; }
+    }
+
+    public class DividendsCalculationResult
+    {
+        public decimal TotalSales { get; set; }
+        public decimal TotalPoints { get; set; }
+        public DateTime? PeriodStart { get; set; }
+        public DateTime? PeriodEnd { get; set; }
+        public List<MemberDividendDto> MemberDividends { get; set; } = new();
+        public DateTime CalculatedAt { get; set; }
     }
 }

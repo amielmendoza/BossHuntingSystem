@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet run:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(dotnet tool restore:*)",
+      "Bash(dotnet ef database:*)",
+      "Bash(dotnet build)",
+      "Bash(ng generate:*)",
+      "Bash(curl:*)",
+      "Read(//c/Users/My PC/Downloads/**)",
+      "Bash(npm run build:*)",
+      "Bash(dotnet build:*)",
+      "Bash(npm start)",
+      "Bash(taskkill:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
