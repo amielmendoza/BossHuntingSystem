@@ -631,11 +631,12 @@ namespace BossHuntingSystem.Server.Controllers
                 var record = await _context.BossDefeats.FindAsync(id);
                 if (record == null) return NotFound();
 
-                var attendees = record.Attendees;
-                if (index < 0 || index >= attendees.Count) return BadRequest("Index out of range");
+                // Work with AttendeeDetails (which contains points info) instead of legacy Attendees
+                var attendeeDetails = record.AttendeeDetails;
+                if (index < 0 || index >= attendeeDetails.Count) return BadRequest("Index out of range");
 
-                attendees.RemoveAt(index);
-                record.Attendees = attendees;
+                attendeeDetails.RemoveAt(index);
+                record.AttendeeDetails = attendeeDetails; // This automatically updates legacy Attendees property
 
                 await _context.SaveChangesAsync();
                 
