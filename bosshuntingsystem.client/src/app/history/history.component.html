@@ -144,22 +144,38 @@
             <div class="mb-3">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <strong>Attendees</strong>
-                <span class="badge text-bg-secondary">{{ details.attendees.length || 0 }} players</span>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge text-bg-secondary">{{ getAttendeeCount(details) }} players</span>
+                  <span class="badge text-bg-info" *ngIf="getTotalAttendeePoints(details) > 0">
+                    Total: {{ getTotalAttendeePoints(details) }} pts
+                  </span>
+                </div>
               </div>
-              <div class="table-responsive" *ngIf="details.attendees && details.attendees.length > 0">
+              <div class="table-responsive" *ngIf="getAttendeeDetailsToDisplay(details) && getAttendeeDetailsToDisplay(details).length > 0">
                 <table class="table table-sm table-striped">
-                                     <thead class="table-light">
-                     <tr>
-                       <th>#</th>
-                       <th>Player Name</th>
-                       <th class="text-end">Actions</th>
-                     </tr>
-                   </thead>
+                  <thead class="table-light">
+                    <tr>
+                      <th>#</th>
+                      <th>Player Name</th>
+                      <th>Status</th>
+                      <th>Points</th>
+                      <th class="text-end">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                                         <tr *ngFor="let attendee of details.attendees; let i = index">
-                       <td class="text-muted">{{ i + 1 }}</td>
-                       <td>{{ attendee }}</td>
-                       <td class="text-end">
+                    <tr *ngFor="let attendeeDetail of getAttendeeDetailsToDisplay(details); let i = index">
+                      <td class="text-muted">{{ i + 1 }}</td>
+                      <td>{{ attendeeDetail.name }}</td>
+                      <td>
+                        <span class="badge" [class.text-bg-success]="!attendeeDetail.isLate" [class.text-bg-warning]="attendeeDetail.isLate">
+                          <i class="bi" [class.bi-check-circle]="!attendeeDetail.isLate" [class.bi-clock]="attendeeDetail.isLate"></i>
+                          {{ attendeeDetail.isLate ? 'Late' : 'On-time' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="fw-semibold">{{ attendeeDetail.points }}</span>
+                      </td>
+                      <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                 (click)="removeAttendee(details, i)" 
                                 title="Remove attendee"
@@ -171,7 +187,7 @@
                   </tbody>
                 </table>
               </div>
-              <div class="text-muted small" *ngIf="!details.attendees || details.attendees.length === 0">
+              <div class="text-muted small" *ngIf="getAttendeeCount(details) === 0">
                 No attendees recorded
               </div>
             </div>

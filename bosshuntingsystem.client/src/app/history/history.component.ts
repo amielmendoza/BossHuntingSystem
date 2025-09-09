@@ -114,13 +114,61 @@ export class HistoryComponent implements OnInit, OnDestroy {
       });
     } else if (this.modalMode === 'attendee') {
       this.bossApi.addAttendee(row.id, text).subscribe({
-        next: (updated) => { row.attendees = updated.attendees; if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees; this.closeModal(); if (this.details) { this.detailsOpen = true; } },
-        error: (e) => console.error('Failed to add attendee', e)
+        next: (updated) => { 
+          row.attendees = updated.attendees;
+          row.attendeeDetails = updated.attendeeDetails;
+          if (this.details && this.details.id === row.id) {
+            this.details.attendees = updated.attendees;
+            this.details.attendeeDetails = updated.attendeeDetails;
+            // Refresh details to ensure we have the latest server state
+            this.bossApi.historyById(row.id).subscribe({
+              next: (freshDetails) => {
+                this.details = freshDetails;
+              },
+              error: (e) => console.error('Failed to refresh details after adding attendee', e)
+            });
+          }
+          this.closeModal(); 
+          if (this.details) { this.detailsOpen = true; } 
+        },
+        error: (e) => {
+          console.error('Failed to add attendee', e);
+          // Show user-friendly error message
+          if (e.error && typeof e.error === 'string' && e.error.includes('already exists')) {
+            alert('This attendee is already in the list. Please try refreshing the page if this seems incorrect.');
+          } else {
+            alert('Failed to add attendee. Please try again.');
+          }
+        }
       });
     } else if (this.modalMode === 'late-attendee') {
       this.bossApi.addLateAttendee(row.id, text).subscribe({
-        next: (updated) => { row.attendees = updated.attendees; if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees; this.closeModal(); if (this.details) { this.detailsOpen = true; } },
-        error: (e) => console.error('Failed to add late attendee', e)
+        next: (updated) => { 
+          row.attendees = updated.attendees;
+          row.attendeeDetails = updated.attendeeDetails;
+          if (this.details && this.details.id === row.id) {
+            this.details.attendees = updated.attendees;
+            this.details.attendeeDetails = updated.attendeeDetails;
+            // Refresh details to ensure we have the latest server state
+            this.bossApi.historyById(row.id).subscribe({
+              next: (freshDetails) => {
+                this.details = freshDetails;
+              },
+              error: (e) => console.error('Failed to refresh details after adding late attendee', e)
+            });
+          }
+          this.closeModal(); 
+          if (this.details) { this.detailsOpen = true; } 
+        },
+        error: (e) => {
+          console.error('Failed to add late attendee', e);
+          // Show user-friendly error message
+          if (e.error && typeof e.error === 'string' && e.error.includes('already exists')) {
+            alert('This attendee is already in the list. Please try refreshing the page if this seems incorrect.');
+          } else {
+            alert('Failed to add attendee. Please try again.');
+          }
+        }
       });
     }
   }
@@ -135,7 +183,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
     try {
       // Prefer server-side Vision AI extraction if configured
       try {
-        const extractMode = this.modalMode === 'late-attendee' ? 'attendee' : this.modalMode;
+        const extractMode: 'loot' | 'attendee' = this.modalMode === 'late-attendee' ? 'attendee' : this.modalMode as 'loot' | 'attendee';
         const ai = await firstValueFrom(this.bossApi.extractFromImage(file, extractMode));
         if (this.modalMode === 'loot') {
           this.ocrSuggestions = ai.loots || [];
@@ -265,7 +313,11 @@ export class HistoryComponent implements OnInit, OnDestroy {
       try {
         const updated = await firstValueFrom(this.bossApi.addAttendee(row.id, item));
         row.attendees = updated.attendees;
-        if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees;
+        row.attendeeDetails = updated.attendeeDetails;
+        if (this.details && this.details.id === row.id) {
+          this.details.attendees = updated.attendees;
+          this.details.attendeeDetails = updated.attendeeDetails;
+        }
         lastUpdated = updated;
         this.ocrAddedCount++;
       } catch (e) {
@@ -285,7 +337,11 @@ export class HistoryComponent implements OnInit, OnDestroy {
       try {
         const updated = await firstValueFrom(this.bossApi.addLateAttendee(row.id, item));
         row.attendees = updated.attendees;
-        if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees;
+        row.attendeeDetails = updated.attendeeDetails;
+        if (this.details && this.details.id === row.id) {
+          this.details.attendees = updated.attendees;
+          this.details.attendeeDetails = updated.attendeeDetails;
+        }
         lastUpdated = updated;
         this.ocrAddedCount++;
       } catch (e) {
@@ -321,9 +377,24 @@ export class HistoryComponent implements OnInit, OnDestroy {
   removeAttendee(row: BossDefeatDto, index: number): void {
     this.bossApi.removeAttendee(row.id, index).subscribe({
       next: (updated) => {
-        if (this.details && this.details.id === row.id) this.details.attendees = updated.attendees;
+        // Update details view with fresh data from server
+        if (this.details && this.details.id === row.id) {
+          this.details.attendees = updated.attendees;
+          this.details.attendeeDetails = updated.attendeeDetails;
+          // Force refresh details to ensure we have the latest server state
+          this.bossApi.historyById(row.id).subscribe({
+            next: (freshDetails) => {
+              this.details = freshDetails;
+            },
+            error: (e) => console.error('Failed to refresh details after removal', e)
+          });
+        }
+        // Update list row
         const listRow = this.rows.find(r => r.id === row.id);
-        if (listRow) listRow.attendees = updated.attendees;
+        if (listRow) {
+          listRow.attendees = updated.attendees;
+          listRow.attendeeDetails = updated.attendeeDetails;
+        }
       },
       error: (e) => console.error('Failed to remove attendee', e)
     });
@@ -397,6 +468,32 @@ export class HistoryComponent implements OnInit, OnDestroy {
   formatDefeatedAt(defeatedAtUtc: string | null): string {
     if (!defeatedAtUtc) return 'History Entry';
     return this.dateUtils.formatPhtForDisplay(new Date(defeatedAtUtc));
+  }
+
+  // Helper methods for attendee details
+  getAttendeeDetailsToDisplay(details: BossDefeatDto | null) {
+    if (!details) return [];
+    // Prefer attendeeDetails if available, fallback to legacy attendees
+    if (details.attendeeDetails && details.attendeeDetails.length > 0) {
+      return details.attendeeDetails;
+    }
+    // Fallback to legacy attendees list (convert to attendee details format)
+    if (details.attendees && details.attendees.length > 0) {
+      return details.attendees.map(name => ({
+        name: name,
+        isLate: false,
+        points: 1.0
+      }));
+    }
+    return [];
+  }
+
+  getAttendeeCount(details: BossDefeatDto | null): number {
+    return this.getAttendeeDetailsToDisplay(details).length;
+  }
+
+  getTotalAttendeePoints(details: BossDefeatDto | null): number {
+    return this.getAttendeeDetailsToDisplay(details).reduce((total, attendee) => total + attendee.points, 0);
   }
 }
 

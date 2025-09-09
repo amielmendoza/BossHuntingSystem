@@ -26,6 +26,12 @@ export interface LootItemDto {
   price: number | null;
 }
 
+export interface AttendeeDetailsDto {
+  name: string;
+  isLate: boolean;
+  points: number;
+}
+
 export interface BossDefeatDto {
   id: number;
   bossId: number;
@@ -36,6 +42,7 @@ export interface BossDefeatDto {
   loots: string[];
   attendees: string[];
   lootItems?: LootItemDto[]; // New property for loot with prices
+  attendeeDetails?: AttendeeDetailsDto[]; // New property for attendee details with points
 }
 
 export interface MemberDto {
