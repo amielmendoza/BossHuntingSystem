@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://risingforcedev.store'
+  apiUrl: ''  // Empty string means same-origin requests
 };
