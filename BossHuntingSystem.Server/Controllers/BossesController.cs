@@ -654,6 +654,38 @@ namespace BossHuntingSystem.Server.Controllers
             }
         }
 
+        [HttpDelete("history/{id:int}/attendee-by-name")]
+        public async Task<ActionResult<BossDefeat>> RemoveAttendeeByName(int id, [FromBody] RemoveAttendeeByNameRequest request)
+        {
+            try
+            {
+                var record = await _context.BossDefeats.FindAsync(id);
+                if (record == null) return NotFound();
+
+                var attendeeDetails = record.AttendeeDetails;
+                var attendeeToRemove = attendeeDetails.FirstOrDefault(a => string.Equals(a.Name.Trim(), request.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+                
+                if (attendeeToRemove == null) return BadRequest("Attendee not found");
+
+                attendeeDetails.Remove(attendeeToRemove);
+                record.AttendeeDetails = attendeeDetails; // This automatically updates legacy Attendees property
+
+                await _context.SaveChangesAsync();
+                
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+                
+                return Ok(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RemoveAttendeeByName] Error: {ex.Message}");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
+
         [HttpDelete("history/{id:int}")]
         public async Task<IActionResult> DeleteHistory(int id)
         {
@@ -763,6 +795,93 @@ namespace BossHuntingSystem.Server.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting member points");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("debug/attendee-records/{name}")]
+        public async Task<ActionResult> GetAttendeeRecords(string name)
+        {
+            try
+            {
+                var defeats = await _context.BossDefeats.ToListAsync();
+                var recordsWithAttendee = new List<object>();
+                
+                foreach (var defeat in defeats)
+                {
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    var foundAttendee = attendeeDetails.FirstOrDefault(a => 
+                        string.Equals(a.Name.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+                    
+                    if (foundAttendee != null)
+                    {
+                        recordsWithAttendee.Add(new
+                        {
+                            RecordId = defeat.Id,
+                            BossName = defeat.BossName,
+                            DefeatedAt = defeat.DefeatedAtUtc,
+                            AttendeeName = foundAttendee.Name,
+                            IsLate = foundAttendee.IsLate,
+                            Points = foundAttendee.Points,
+                            AllAttendees = attendeeDetails.Select(a => new { a.Name, a.IsLate, a.Points }).ToList()
+                        });
+                    }
+                }
+                
+                return Ok(new
+                {
+                    SearchName = name,
+                    RecordsFound = recordsWithAttendee.Count,
+                    Records = recordsWithAttendee
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting attendee records for {Name}", name);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpDelete("debug/cleanup-attendee/{name}")]
+        public async Task<ActionResult> CleanupAttendeeRecords(string name)
+        {
+            try
+            {
+                var defeats = await _context.BossDefeats.ToListAsync();
+                var recordsModified = 0;
+                
+                foreach (var defeat in defeats)
+                {
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    var originalCount = attendeeDetails.Count;
+                    
+                    // Remove attendees matching the name (case-insensitive)
+                    var updatedAttendees = attendeeDetails
+                        .Where(a => !string.Equals(a.Name.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    
+                    if (updatedAttendees.Count != originalCount)
+                    {
+                        defeat.AttendeeDetails = updatedAttendees;
+                        recordsModified++;
+                    }
+                }
+                
+                if (recordsModified > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+                
+                return Ok(new
+                {
+                    AttendeeNameCleaned = name,
+                    RecordsModified = recordsModified,
+                    Message = $"Removed '{name}' from {recordsModified} records"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cleaning up attendee records for {Name}", name);
                 return StatusCode(500, "Internal server error");
             }
         }

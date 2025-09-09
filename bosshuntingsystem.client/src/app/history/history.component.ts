@@ -400,6 +400,32 @@ export class HistoryComponent implements OnInit, OnDestroy {
     });
   }
 
+  removeAttendeeByName(row: BossDefeatDto, name: string): void {
+    this.bossApi.removeAttendeeByName(row.id, name).subscribe({
+      next: (updated) => {
+        // Update details view with fresh data from server
+        if (this.details && this.details.id === row.id) {
+          this.details.attendees = updated.attendees;
+          this.details.attendeeDetails = updated.attendeeDetails;
+          // Force refresh details to ensure we have the latest server state
+          this.bossApi.historyById(row.id).subscribe({
+            next: (freshDetails) => {
+              this.details = freshDetails;
+            },
+            error: (e) => console.error('Failed to refresh details after removal', e)
+          });
+        }
+        // Update list row
+        const listRow = this.rows.find(r => r.id === row.id);
+        if (listRow) {
+          listRow.attendees = updated.attendees;
+          listRow.attendeeDetails = updated.attendeeDetails;
+        }
+      },
+      error: (e) => console.error('Failed to remove attendee by name', e)
+    });
+  }
+
   updateLootPrice(row: BossDefeatDto, index: number, price: number | null): void {
     this.bossApi.updateLootPrice(row.id, index, price).subscribe({
       next: (updated) => {

@@ -155,6 +155,11 @@ export class BossService {
   removeAttendee(historyId: number, index: number): Observable<BossDefeatDto> {
     return this.http.delete<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee/${index}`));
   }
+  removeAttendeeByName(historyId: number, name: string): Observable<BossDefeatDto> {
+    return this.http.delete<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/attendee-by-name`), {
+      body: { name: name }
+    });
+  }
   updateLootPrice(historyId: number, index: number, price: number | null): Observable<BossDefeatDto> {
     return this.http.put<BossDefeatDto>(this.url(`/api/bosses/history/${historyId}/loot/${index}/price`), { index, price });
   }
