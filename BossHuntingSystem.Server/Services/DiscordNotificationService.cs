@@ -200,10 +200,10 @@ namespace BossHuntingSystem.Server.Services
 
         public async Task SendDailyPointsSummaryAsync(List<MemberPointsDto> memberPoints)
         {
-            var webhookUrl = _configuration["DISCORD_WEBHOOK_URL"];
+            var webhookUrl = _configuration["DISCORD_POINTS_WEBHOOK_URL"];
             if (string.IsNullOrEmpty(webhookUrl))
             {
-                _logger.LogWarning("Discord webhook URL not configured for points summary");
+                _logger.LogWarning("Discord points webhook URL not configured for points summary");
                 return;
             }
 
