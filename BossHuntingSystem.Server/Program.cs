@@ -43,8 +43,6 @@ builder.Services.AddCors(options =>
         }
     });
 });
-builder.Services.AddHttpClient();
-
 // Discord notification services
 builder.Services.AddHttpClient<IDiscordNotificationService, DiscordNotificationService>();
 builder.Services.AddSingleton<IBossNotificationTracker, BossNotificationTracker>();

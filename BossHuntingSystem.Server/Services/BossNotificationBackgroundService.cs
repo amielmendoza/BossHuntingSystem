@@ -70,13 +70,21 @@ namespace BossHuntingSystem.Server.Services
                     var timeDifference = Math.Abs((now - notificationTime).TotalMinutes);
 
                     // Send notification if we're within 30 seconds of the notification time
-                    if (timeDifference <= 0.5 && notificationTracker.ShouldSendNotification(boss.Id, notifyMinutes, respawnTime))
+                    if (timeDifference <= 0.5)
                     {
-                        _logger.LogInformation("Sending Discord notification for {BossName} - {Minutes} minutes until respawn, owned by {Owner}", 
-                            boss.Name, notifyMinutes, boss.Owner ?? "Unknown");
+                        if (notificationTracker.ShouldSendNotification(boss.Id, notifyMinutes, respawnTime))
+                        {
+                            _logger.LogInformation("Sending Discord notification for {BossName} - {Minutes} minutes until respawn, owned by {Owner}", 
+                                boss.Name, notifyMinutes, boss.Owner ?? "Unknown");
 
-                        await discordService.SendBossNotificationAsync(boss.Name, notifyMinutes, boss.Owner);
-                        notificationTracker.RecordNotification(boss.Id, notifyMinutes, respawnTime);
+                            await discordService.SendBossNotificationAsync(boss.Name, notifyMinutes, boss.Owner);
+                            notificationTracker.RecordNotification(boss.Id, notifyMinutes, respawnTime);
+                        }
+                        else
+                        {
+                            _logger.LogDebug("Skipping duplicate notification for {BossName} - {Minutes} minutes (already sent)", 
+                                boss.Name, notifyMinutes);
+                        }
                     }
                 }
             }

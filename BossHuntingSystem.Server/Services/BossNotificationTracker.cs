@@ -13,16 +13,35 @@ namespace BossHuntingSystem.Server.Services
     {
         private static readonly List<BossNotification> SentNotifications = new();
         private static readonly object Lock = new();
+        private readonly ILogger<BossNotificationTracker> _logger;
+
+        public BossNotificationTracker(ILogger<BossNotificationTracker> logger)
+        {
+            _logger = logger;
+        }
 
         public bool ShouldSendNotification(int bossId, int minutesBeforeRespawn, DateTime bossRespawnTime)
         {
             lock (Lock)
             {
                 // Check if we've already sent this specific notification for this respawn cycle
-                return !SentNotifications.Any(n => 
+                var existingNotification = SentNotifications.FirstOrDefault(n => 
                     n.BossId == bossId && 
                     n.MinutesBeforeRespawn == minutesBeforeRespawn &&
                     Math.Abs((n.BossRespawnTime - bossRespawnTime).TotalMinutes) < 1); // Within 1 minute tolerance
+
+                var shouldSend = existingNotification == null;
+                
+                _logger.LogDebug("Notification check for Boss {BossId}, {Minutes}min before respawn at {RespawnTime}: {ShouldSend}", 
+                    bossId, minutesBeforeRespawn, bossRespawnTime, shouldSend ? "SEND" : "SKIP");
+                
+                if (existingNotification != null)
+                {
+                    _logger.LogDebug("Existing notification found: sent at {SentAt} for respawn at {ExistingRespawnTime}", 
+                        existingNotification.SentAt, existingNotification.BossRespawnTime);
+                }
+
+                return shouldSend;
             }
         }
 
@@ -30,13 +49,18 @@ namespace BossHuntingSystem.Server.Services
         {
             lock (Lock)
             {
-                SentNotifications.Add(new BossNotification
+                var notification = new BossNotification
                 {
                     BossId = bossId,
                     MinutesBeforeRespawn = minutesBeforeRespawn,
                     SentAt = DateTime.UtcNow,
                     BossRespawnTime = bossRespawnTime
-                });
+                };
+
+                SentNotifications.Add(notification);
+                
+                _logger.LogDebug("Recorded notification for Boss {BossId}, {Minutes}min before respawn at {RespawnTime}, sent at {SentAt}", 
+                    bossId, minutesBeforeRespawn, bossRespawnTime, notification.SentAt);
             }
         }
 

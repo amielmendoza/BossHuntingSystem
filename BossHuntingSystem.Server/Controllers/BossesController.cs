@@ -726,11 +726,13 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
+                // Manual notifications bypass the notification tracker to allow intentional overrides
+                // This enables users to send notifications even if automatic ones were already sent
                 await _discordService.SendBossNotificationAsync(dto.BossName, dto.MinutesUntilRespawn ?? 5, dto.Owner);
                 
                 _logger.LogInformation("Successfully sent manual notification for boss {BossName} owned by {Owner}", dto.BossName, dto.Owner ?? "Unknown");
                 
-                return Ok(new { message = "Notification sent successfully" });
+                return Ok(new { message = "Manual notification sent successfully" });
             }
             catch (Exception ex)
             {
