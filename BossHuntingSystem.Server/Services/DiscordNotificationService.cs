@@ -27,10 +27,10 @@ namespace BossHuntingSystem.Server.Services
 
         public async Task SendBossNotificationAsync(string bossName, int minutesUntilRespawn, string? owner = null)
         {
-            var webhookUrl = _configuration["DISCORD_WEBHOOK_URL"];
+            var webhookUrl = GetWebhookUrlForOwner(owner);
             if (string.IsNullOrEmpty(webhookUrl))
             {
-                _logger.LogWarning("Discord webhook URL not configured");
+                _logger.LogWarning("Discord webhook URL not configured for owner: {Owner}", owner ?? "Unknown");
                 return;
             }
 
@@ -48,8 +48,8 @@ namespace BossHuntingSystem.Server.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Discord notification sent for {BossName} ({Minutes} minutes) owned by {Owner}", 
-                        bossName, minutesUntilRespawn, owner ?? "Unknown");
+                    _logger.LogInformation("Discord notification sent for {BossName} ({Minutes} minutes) owned by {Owner} to webhook: {WebhookUrl}", 
+                        bossName, minutesUntilRespawn, owner ?? "Unknown", webhookUrl);
                 }
                 else
                 {
@@ -61,6 +61,20 @@ namespace BossHuntingSystem.Server.Services
             {
                 _logger.LogError(ex, "Error sending Discord notification for {BossName}", bossName);
             }
+        }
+
+        private string? GetWebhookUrlForOwner(string? owner)
+        {
+            // Owner-based webhook routing
+            var webhookUrl = owner?.ToUpperInvariant() switch
+            {
+                "PARAK" => _configuration["DISCORD_WEBHOOK_URL_PARAK"],
+                "ARQ" => _configuration["DISCORD_WEBHOOK_URL_ARQ"],
+                _ => _configuration["DISCORD_WEBHOOK_URL"] // Default fallback
+            };
+            
+            _logger.LogDebug("Selected webhook for owner '{Owner}': {WebhookUrl}", owner ?? "Unknown", webhookUrl ?? "None");
+            return webhookUrl;
         }
 
         private DiscordWebhookMessage CreateBossNotificationMessage(string bossName, int minutesUntilRespawn, string? owner = null)
