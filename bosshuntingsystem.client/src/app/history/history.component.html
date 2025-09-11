@@ -74,14 +74,14 @@
 
   <!-- Modal -->
   <div class="modal" tabindex="-1" [class.show]="modalOpen || detailsOpen" [style.display]="(modalOpen || detailsOpen) ? 'block' : 'none'" style="background: rgba(0,0,0,.4);">
-    <div class="modal-dialog">
-      <div class="modal-content vh-75 overflow-auto">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content" style="max-height: 90vh;">
         <ng-container *ngIf="detailsOpen; else addForm">
           <div class="modal-header">
             <h5 class="modal-title">History Details</h5>
             <button type="button" class="btn-close" (click)="closeDetails()"></button>
           </div>
-          <div class="modal-body" *ngIf="details">
+          <div class="modal-body" *ngIf="details" style="max-height: calc(90vh - 120px); overflow-y: auto;">
             <div class="mb-2"><strong>Boss:</strong> {{ details.bossName }}</div>
             <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc ? formatDefeatedAt(details.defeatedAtUtc) : 'History Entry (Not Actually Defeated)' }}</div>
             <div class="mb-2"><strong>Owner:</strong> {{ details.owner || 'Not specified' }}</div>
@@ -107,8 +107,8 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let loot of details.loots; let i = index">
-                      <td class="text-muted">{{ i + 1 }}</td>
+                    <tr *ngFor="let loot of getPaginatedLoots(details); let i = index">
+                      <td class="text-muted">{{ ((lootsCurrentPage - 1) * lootsItemsPerPage) + i + 1 }}</td>
                       <td>{{ loot }}</td>
                       <td>
                         <div class="input-group input-group-sm">
@@ -116,8 +116,8 @@
                           <input 
                             type="number" 
                             class="form-control form-control-sm" 
-                            [value]="details.lootItems?.[i]?.price || ''" 
-                            (change)="onPriceChange($event, details, i)"
+                            [value]="details.lootItems?.[((lootsCurrentPage - 1) * lootsItemsPerPage) + i]?.price || ''" 
+                            (change)="onPriceChange($event, details, ((lootsCurrentPage - 1) * lootsItemsPerPage) + i)"
                             placeholder="0.00"
                             min="0"
                             step="0.01"
@@ -126,7 +126,7 @@
                       </td>
                       <td class="text-end">
                         <button type="button" class="btn btn-sm btn-outline-danger" 
-                                (click)="removeLoot(details, i)" 
+                                (click)="removeLoot(details, ((lootsCurrentPage - 1) * lootsItemsPerPage) + i)" 
                                 title="Remove loot"
                                 aria-label="Remove loot">
                           <i class="bi bi-trash"></i>
@@ -135,6 +135,31 @@
                     </tr>
                   </tbody>
                 </table>
+                
+                <!-- Loots Pagination -->
+                <nav aria-label="Loots pagination" *ngIf="getLootsTotalPages(details) > 1">
+                  <ul class="pagination pagination-sm justify-content-center">
+                    <li class="page-item" [class.disabled]="lootsCurrentPage === 1">
+                      <button class="page-link" (click)="setLootsPage(lootsCurrentPage - 1)" [disabled]="lootsCurrentPage === 1">
+                        Previous
+                      </button>
+                    </li>
+                    <li class="page-item" *ngFor="let page of [].constructor(getLootsTotalPages(details)); let p = index" 
+                        [class.active]="lootsCurrentPage === p + 1">
+                      <button class="page-link" (click)="setLootsPage(p + 1)">{{ p + 1 }}</button>
+                    </li>
+                    <li class="page-item" [class.disabled]="lootsCurrentPage === getLootsTotalPages(details)">
+                      <button class="page-link" (click)="setLootsPage(lootsCurrentPage + 1)" 
+                              [disabled]="lootsCurrentPage === getLootsTotalPages(details)">
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                  <div class="text-center small text-muted">
+                    Page {{ lootsCurrentPage }} of {{ getLootsTotalPages(details) }} 
+                    ({{ details.loots.length }} items total)
+                  </div>
+                </nav>
               </div>
               <div class="text-muted small" *ngIf="!details.loots || details.loots.length === 0">
                 No loot items recorded
@@ -163,8 +188,8 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let attendeeDetail of getAttendeeDetailsToDisplay(details); let i = index">
-                      <td class="text-muted">{{ i + 1 }}</td>
+                    <tr *ngFor="let attendeeDetail of getPaginatedAttendees(details); let i = index">
+                      <td class="text-muted">{{ ((attendeesCurrentPage - 1) * attendeesItemsPerPage) + i + 1 }}</td>
                       <td>{{ attendeeDetail.name }}</td>
                       <td>
                         <span class="badge" [class.text-bg-success]="!attendeeDetail.isLate" [class.text-bg-warning]="attendeeDetail.isLate">
@@ -186,6 +211,31 @@
                     </tr>
                   </tbody>
                 </table>
+                
+                <!-- Attendees Pagination -->
+                <nav aria-label="Attendees pagination" *ngIf="getAttendesTotalPages(details) > 1">
+                  <ul class="pagination pagination-sm justify-content-center">
+                    <li class="page-item" [class.disabled]="attendeesCurrentPage === 1">
+                      <button class="page-link" (click)="setAttendeesPage(attendeesCurrentPage - 1)" [disabled]="attendeesCurrentPage === 1">
+                        Previous
+                      </button>
+                    </li>
+                    <li class="page-item" *ngFor="let page of [].constructor(getAttendesTotalPages(details)); let p = index" 
+                        [class.active]="attendeesCurrentPage === p + 1">
+                      <button class="page-link" (click)="setAttendeesPage(p + 1)">{{ p + 1 }}</button>
+                    </li>
+                    <li class="page-item" [class.disabled]="attendeesCurrentPage === getAttendesTotalPages(details)">
+                      <button class="page-link" (click)="setAttendeesPage(attendeesCurrentPage + 1)" 
+                              [disabled]="attendeesCurrentPage === getAttendesTotalPages(details)">
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                  <div class="text-center small text-muted">
+                    Page {{ attendeesCurrentPage }} of {{ getAttendesTotalPages(details) }} 
+                    ({{ getAttendeeCount(details) }} attendees total)
+                  </div>
+                </nav>
               </div>
               <div class="text-muted small" *ngIf="getAttendeeCount(details) === 0">
                 No attendees recorded
@@ -229,7 +279,7 @@
             </h5>
             <button type="button" class="btn-close" (click)="closeModal()"></button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" style="max-height: calc(90vh - 120px); overflow-y: auto;">
             <div class="mb-3" *ngIf="modalMode === 'loot' || modalMode === 'attendee' || modalMode === 'late-attendee'">
               <label class="form-label small text-muted">Upload screenshot (optional)</label>
               <input type="file" accept="image/*" class="form-control" (change)="onImageSelected($event)">

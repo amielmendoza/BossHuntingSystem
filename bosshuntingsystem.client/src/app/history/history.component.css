@@ -16,3 +16,45 @@
   .truncate { max-width: 200px; }
 }
 
+/* Modal improvements */
+.modal-dialog {
+  margin: 1rem auto;
+  display: flex;
+  align-items: center;
+  min-height: calc(100vh - 2rem);
+}
+
+.modal-content {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+/* Responsive modal adjustments */
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 0.5rem auto;
+    min-height: calc(100vh - 1rem);
+  }
+  
+  .modal-content {
+    max-height: 95vh !important;
+  }
+  
+  .modal-body {
+    max-height: calc(95vh - 120px) !important;
+    padding: 1rem;
+  }
+}
+

@@ -13,7 +13,10 @@
       "Bash(dotnet build:*)",
       "Bash(npm start)",
       "Bash(taskkill:*)",
-      "Bash(dotnet publish:*)"
+      "Bash(dotnet publish:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run:*)"
     ],
     "deny": [],
     "ask": []

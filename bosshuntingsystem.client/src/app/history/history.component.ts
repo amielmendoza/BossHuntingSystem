@@ -26,6 +26,12 @@ export class HistoryComponent implements OnInit, OnDestroy {
   ocrSuggestions: string[] = [];
   ocrAddedCount = 0;
   
+  // Pagination for details modal
+  lootsCurrentPage = 1;
+  lootsItemsPerPage = 10;
+  attendeesCurrentPage = 1;
+  attendeesItemsPerPage = 10;
+  
 
 
   constructor(private bossApi: BossService, private _dateUtils: DateUtilsService) {
@@ -86,6 +92,7 @@ export class HistoryComponent implements OnInit, OnDestroy {
   closeModal(): void { this.modalOpen = false; }
 
   openDetails(row: BossDefeatDto): void {
+    this.resetPagination();
     this.bossApi.historyById(row.id).subscribe({
       next: r => { this.details = r; this.detailsOpen = true; this.checkCp(); },
       error: e => console.error('Failed to load details', e)
@@ -520,6 +527,44 @@ export class HistoryComponent implements OnInit, OnDestroy {
 
   getTotalAttendeePoints(details: BossDefeatDto | null): number {
     return this.getAttendeeDetailsToDisplay(details).reduce((total, attendee) => total + attendee.points, 0);
+  }
+
+  // Pagination helper methods
+  getPaginatedLoots(details: BossDefeatDto | null): any[] {
+    if (!details?.loots) return [];
+    const startIndex = (this.lootsCurrentPage - 1) * this.lootsItemsPerPage;
+    const endIndex = startIndex + this.lootsItemsPerPage;
+    return details.loots.slice(startIndex, endIndex);
+  }
+
+  getPaginatedAttendees(details: BossDefeatDto | null): any[] {
+    const attendees = this.getAttendeeDetailsToDisplay(details);
+    const startIndex = (this.attendeesCurrentPage - 1) * this.attendeesItemsPerPage;
+    const endIndex = startIndex + this.attendeesItemsPerPage;
+    return attendees.slice(startIndex, endIndex);
+  }
+
+  getLootsTotalPages(details: BossDefeatDto | null): number {
+    if (!details?.loots) return 0;
+    return Math.ceil(details.loots.length / this.lootsItemsPerPage);
+  }
+
+  getAttendesTotalPages(details: BossDefeatDto | null): number {
+    const attendees = this.getAttendeeDetailsToDisplay(details);
+    return Math.ceil(attendees.length / this.attendeesItemsPerPage);
+  }
+
+  setLootsPage(page: number): void {
+    this.lootsCurrentPage = page;
+  }
+
+  setAttendeesPage(page: number): void {
+    this.attendeesCurrentPage = page;
+  }
+
+  resetPagination(): void {
+    this.lootsCurrentPage = 1;
+    this.attendeesCurrentPage = 1;
   }
 }
 
