@@ -245,6 +245,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return boss.nextRespawnAt || this._dateUtils.getCurrentPhtTime();
   }
 
+  gracePeriodAt(boss: Boss): Date {
+    // Grace period is respawn time + 2 hours
+    const nextRespawn = this.nextRespawnAt(boss);
+    const gracePeriod = new Date(nextRespawn);
+    gracePeriod.setHours(gracePeriod.getHours() + 2);
+    return gracePeriod;
+  }
+
   msUntilRespawn(boss: Boss): number {
     const nextRespawnTime = boss.nextRespawnAt || this._dateUtils.getCurrentPhtTime();
     const currentTime = this.nowEpochMs;

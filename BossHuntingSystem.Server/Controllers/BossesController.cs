@@ -742,13 +742,47 @@ namespace BossHuntingSystem.Server.Controllers
         }
 
         [HttpGet("points")]
-        public async Task<ActionResult<IEnumerable<MemberPointsDto>>> GetMemberPoints()
+        public async Task<ActionResult<IEnumerable<MemberPointsDto>>> GetMemberPoints(
+            [FromQuery] string? startDate = null,
+            [FromQuery] string? endDate = null)
         {
             try
             {
-                // Get all boss defeats with attendance data
-                var defeats = await _context.BossDefeats.ToListAsync();
-                
+                // Get boss defeats with optional date filtering
+                var defeatsQuery = _context.BossDefeats.AsQueryable();
+
+                // Apply date filters if provided (exclude history records with null dates when filtering)
+                bool hasDateFilter = false;
+
+                if (!string.IsNullOrEmpty(startDate) && DateTime.TryParse(startDate, out var start))
+                {
+                    // Set start time to beginning of day (Monday 12:00 AM)
+                    var startDateTime = start.Date;
+                    _logger.LogInformation("Filtering points from start date: {StartDate} (parsed as {StartDateTime})", startDate, startDateTime);
+                    defeatsQuery = defeatsQuery.Where(d => d.DefeatedAtUtc != null && d.DefeatedAtUtc >= startDateTime);
+                    hasDateFilter = true;
+                }
+
+                if (!string.IsNullOrEmpty(endDate) && DateTime.TryParse(endDate, out var end))
+                {
+                    // Set end time to end of day (Sunday 11:59:59 PM)
+                    var endDateTime = end.Date.AddDays(1).AddTicks(-1);
+                    _logger.LogInformation("Filtering points to end date: {EndDate} (parsed as {EndDateTime})", endDate, endDateTime);
+                    defeatsQuery = defeatsQuery.Where(d => d.DefeatedAtUtc != null && d.DefeatedAtUtc <= endDateTime);
+                    hasDateFilter = true;
+                }
+
+                // If any date filter is applied, exclude null dates (history entries)
+                if (hasDateFilter)
+                {
+                    _logger.LogInformation("Date filtering active - excluding history entries (null DefeatedAtUtc)");
+                }
+
+                var defeats = await defeatsQuery.ToListAsync();
+
+                _logger.LogInformation("Found {DefeatCount} defeats after date filtering (startDate: {StartDate}, endDate: {EndDate})",
+                    defeats.Count, startDate ?? "none", endDate ?? "none");
+
                 // Dictionary to track points for each member (now using decimal for late attendance)
                 // Using case-insensitive comparison to handle different casing of member names
                 var memberPoints = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
@@ -844,6 +878,40 @@ namespace BossHuntingSystem.Server.Controllers
             }
         }
 
+        [HttpGet("debug/defeats-dates")]
+        public async Task<ActionResult> GetDefeatsWithDates()
+        {
+            try
+            {
+                var defeats = await _context.BossDefeats
+                    .Select(d => new
+                    {
+                        Id = d.Id,
+                        BossName = d.BossName,
+                        DefeatedAtUtc = d.DefeatedAtUtc,
+                        AttendeeCount = d.AttendeeDetails.Count,
+                        HasAttendees = d.AttendeeDetails.Any()
+                    })
+                    .OrderBy(d => d.DefeatedAtUtc)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    TotalRecords = defeats.Count,
+                    RecordsWithDates = defeats.Count(d => d.DefeatedAtUtc != null),
+                    RecordsWithoutDates = defeats.Count(d => d.DefeatedAtUtc == null),
+                    OldestRecord = defeats.FirstOrDefault(d => d.DefeatedAtUtc != null)?.DefeatedAtUtc,
+                    NewestRecord = defeats.LastOrDefault(d => d.DefeatedAtUtc != null)?.DefeatedAtUtc,
+                    Records = defeats
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting defeats with dates");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         [HttpDelete("debug/cleanup-attendee/{name}")]
         public async Task<ActionResult> CleanupAttendeeRecords(string name)
         {
@@ -851,29 +919,29 @@ namespace BossHuntingSystem.Server.Controllers
             {
                 var defeats = await _context.BossDefeats.ToListAsync();
                 var recordsModified = 0;
-                
+
                 foreach (var defeat in defeats)
                 {
                     var attendeeDetails = defeat.AttendeeDetails;
                     var originalCount = attendeeDetails.Count;
-                    
+
                     // Remove attendees matching the name (case-insensitive)
                     var updatedAttendees = attendeeDetails
                         .Where(a => !string.Equals(a.Name.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))
                         .ToList();
-                    
+
                     if (updatedAttendees.Count != originalCount)
                     {
                         defeat.AttendeeDetails = updatedAttendees;
                         recordsModified++;
                     }
                 }
-                
+
                 if (recordsModified > 0)
                 {
                     await _context.SaveChangesAsync();
                 }
-                
+
                 return Ok(new
                 {
                     AttendeeNameCleaned = name,

@@ -83,7 +83,7 @@
           </div>
           <div class="modal-body" *ngIf="details" style="max-height: calc(90vh - 120px); overflow-y: auto;">
             <div class="mb-2"><strong>Boss:</strong> {{ details.bossName }}</div>
-            <div class="mb-2"><strong>Defeated:</strong> {{ details.defeatedAtUtc ? formatDefeatedAt(details.defeatedAtUtc) : 'History Entry (Not Actually Defeated)' }}</div>
+            <div class="mb-2"><strong>Defeated:</strong> {{ formatDefeatedAt(details.defeatedAtUtc) || 'History Entry (Not Actually Defeated)' }}</div>
             <div class="mb-2"><strong>Owner:</strong> {{ details.owner || 'Not specified' }}</div>
             <hr>
             <div class="mb-3">

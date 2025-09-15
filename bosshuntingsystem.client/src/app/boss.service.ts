@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
@@ -221,6 +221,30 @@ export class BossService {
   // Get member points from attendance tracking
   getMemberPoints(): Observable<MemberPointsDto[]> {
     return this.http.get<MemberPointsDto[]>(this.url('/api/bosses/points'));
+  }
+
+  // Get member points with date filter
+  getMemberPointsWithDateFilter(startDate?: string, endDate?: string): Observable<MemberPointsDto[]> {
+    let httpParams = new HttpParams();
+
+    if (startDate) {
+      httpParams = httpParams.set('startDate', startDate);
+    }
+    if (endDate) {
+      httpParams = httpParams.set('endDate', endDate);
+    }
+
+    console.log('[BossService] getMemberPointsWithDateFilter called with:', {
+      startDate,
+      endDate,
+      hasStartDate: !!startDate,
+      hasEndDate: !!endDate,
+      httpParams: httpParams.toString()
+    });
+
+    return this.http.get<MemberPointsDto[]>(this.url('/api/bosses/points'), {
+      params: httpParams
+    });
   }
 
   // Calculate dividends based on total sales and member points

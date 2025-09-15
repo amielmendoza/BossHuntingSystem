@@ -16,7 +16,12 @@
       "Bash(dotnet publish:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run lint)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(cmd /c:*)",
+      "Bash(npx ng serve:*)",
+      "Bash(dotnet ef dbcontext scaffold:*)",
+      "Bash(timeout:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

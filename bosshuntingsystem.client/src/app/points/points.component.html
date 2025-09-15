@@ -19,6 +19,60 @@
     </div>
   </div>
 
+  <!-- Date Filter Controls -->
+  <div class="filter-section mb-4 p-3 bg-light rounded">
+    <div class="row align-items-end g-3">
+      <div class="col-md-3">
+        <label class="form-label small text-muted fw-semibold">Filter Period</label>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm"
+                  [class.btn-primary]="filterPeriod === 'all'"
+                  [class.btn-outline-secondary]="filterPeriod !== 'all'"
+                  (click)="setFilterPeriod('all')">
+            All Time
+          </button>
+          <button class="btn btn-sm"
+                  [class.btn-primary]="filterPeriod === 'week'"
+                  [class.btn-outline-secondary]="filterPeriod !== 'week'"
+                  (click)="setFilterPeriod('week')">
+            This Week
+          </button>
+          <button class="btn btn-sm"
+                  [class.btn-primary]="filterPeriod === 'month'"
+                  [class.btn-outline-secondary]="filterPeriod !== 'month'"
+                  (click)="setFilterPeriod('month')">
+            This Month
+          </button>
+          <button class="btn btn-sm"
+                  [class.btn-primary]="filterPeriod === 'custom'"
+                  [class.btn-outline-secondary]="filterPeriod !== 'custom'"
+                  (click)="setFilterPeriod('custom')">
+            Custom
+          </button>
+        </div>
+      </div>
+      <div class="col-md-3" *ngIf="filterPeriod === 'custom'">
+        <label class="form-label small text-muted">Start Date</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="filterStartDate" (change)="applyDateFilter()">
+      </div>
+      <div class="col-md-3" *ngIf="filterPeriod === 'custom'">
+        <label class="form-label small text-muted">End Date</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="filterEndDate" (change)="applyDateFilter()">
+      </div>
+      <div class="col-md-3">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-info-subtle text-info">
+            <i class="bi bi-calendar-range me-1"></i>
+            {{ getFilterSummary() }}
+          </span>
+          <span class="badge bg-success-subtle text-success" *ngIf="filterPeriod !== 'all'">
+            {{ filteredMemberPoints.length }} members
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Loading State -->
   <div *ngIf="loading" class="loading-state text-center py-5">
     <div class="spinner-border text-primary mb-3" role="status">
@@ -41,7 +95,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let member of memberPoints; let i = index" class="member-row animate-slide-in" [class.top-performer]="i < 3" [style.animation-delay.s]="i * 0.1">
+          <tr *ngFor="let member of getDisplayedMemberPoints(); let i = index" class="member-row animate-slide-in" [class.top-performer]="i < 3" [style.animation-delay.s]="i * 0.1">
             <td class="rank-cell">
               <div class="rank-badge" [ngClass]="{
                 'rank-gold': i === 0,
@@ -94,13 +148,13 @@
     </div>
     
     <!-- Empty State -->
-    <div class="empty-state text-center py-5" *ngIf="memberPoints.length === 0">
+    <div class="empty-state text-center py-5" *ngIf="getDisplayedMemberPoints().length === 0">
       <div class="empty-state-icon mb-3">
         <i class="bi bi-trophy text-muted" style="font-size: 3rem;"></i>
       </div>
-      <h5 class="empty-state-title">No Points Data Yet</h5>
-      <p class="text-muted mb-3">Points are earned by attending boss battles. Get started by recording your first battle!</p>
-      <button class="btn btn-primary btn-modern hover-glow button-press">
+      <h5 class="empty-state-title">{{ memberPoints.length === 0 ? 'No Points Data Yet' : 'No Points in Selected Period' }}</h5>
+      <p class="text-muted mb-3">{{ memberPoints.length === 0 ? 'Points are earned by attending boss battles. Get started by recording your first battle!' : 'Try selecting a different time period or check the date range.' }}</p>
+      <button class="btn btn-primary btn-modern hover-glow button-press" *ngIf="memberPoints.length === 0">
         <i class="bi bi-plus-circle me-1"></i>
         Record First Battle
       </button>
@@ -108,43 +162,43 @@
   </div>
 
   <!-- Quick Stats Cards -->
-  <div class="stats-grid mt-4 stagger-animation" *ngIf="memberPoints.length > 0">
+  <div class="stats-grid mt-4 stagger-animation" *ngIf="getDisplayedMemberPoints().length > 0">
     <div class="stat-card hover-lift">
       <div class="stat-icon bg-primary-subtle text-primary">
         <i class="bi bi-people-fill"></i>
       </div>
       <div class="stat-content">
-        <div class="stat-number">{{ memberPoints.length }}</div>
+        <div class="stat-number">{{ getDisplayedMemberPoints().length }}</div>
         <div class="stat-label">Active Members</div>
       </div>
     </div>
-    
+
     <div class="stat-card hover-lift">
       <div class="stat-icon bg-success-subtle text-success">
         <i class="bi bi-trophy-fill"></i>
       </div>
       <div class="stat-content">
-        <div class="stat-number">{{ getTotalPoints() }}</div>
+        <div class="stat-number">{{ getTotalFilteredPoints() }}</div>
         <div class="stat-label">Total Points</div>
       </div>
     </div>
-    
+
     <div class="stat-card hover-lift">
       <div class="stat-icon bg-warning-subtle text-warning">
         <i class="bi bi-star-fill"></i>
       </div>
       <div class="stat-content">
-        <div class="stat-number">{{ getAveragePoints() | number:'1.1-1' }}</div>
+        <div class="stat-number">{{ getAverageFilteredPoints() | number:'1.1-1' }}</div>
         <div class="stat-label">Avg Points</div>
       </div>
     </div>
-    
+
     <div class="stat-card hover-lift">
       <div class="stat-icon bg-info-subtle text-info">
         <i class="bi bi-graph-up"></i>
       </div>
       <div class="stat-content">
-        <div class="stat-number">{{ getHighestScore() }}</div>
+        <div class="stat-number">{{ getHighestFilteredScore() }}</div>
         <div class="stat-label">Highest Score</div>
       </div>
     </div>

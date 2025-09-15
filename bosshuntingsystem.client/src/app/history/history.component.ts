@@ -497,10 +497,17 @@ export class HistoryComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Helper method to format defeated at time (assumes backend returns PHT time)
+  // Helper method to format defeated at time (handles UTC to PHT conversion properly)
   formatDefeatedAt(defeatedAtUtc: string | null): string {
     if (!defeatedAtUtc) return 'History Entry';
-    return this.dateUtils.formatPhtForDisplay(new Date(defeatedAtUtc));
+    // Ensure the UTC string is properly formatted with timezone designator
+    let utcString = defeatedAtUtc;
+    if (!utcString.endsWith('Z') && !utcString.includes('+') && !utcString.includes('-', 10)) {
+      // If no timezone info, assume it's UTC and append 'Z'
+      utcString = utcString + 'Z';
+    }
+    const dateObj = new Date(utcString);
+    return this.dateUtils.formatPhtForDisplay(dateObj);
   }
 
   // Helper methods for attendee details

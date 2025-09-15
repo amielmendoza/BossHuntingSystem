@@ -46,6 +46,7 @@
             <th>Respawn Time</th>
             <th>Last Killed At</th>
             <th>Next Respawn</th>
+            <th>Grace Period</th>
             <th>Owned By</th>
             <th>Countdown</th>
             <th class="text-end">Actions</th>
@@ -58,6 +59,7 @@
             <td class="text-secondary">{{ b.respawnHours }} hrs</td>
             <td class="text-secondary">{{ dateUtils.formatPhtForDisplay(b.lastKilledAt) || '-' }}</td>
             <td class="text-secondary">{{ dateUtils.formatPhtForDisplay(nextRespawnAt(b)) }}</td>
+            <td class="text-secondary">{{ dateUtils.formatPhtForDisplay(gracePeriodAt(b)) }}</td>
             <td class="text-secondary">{{ b.owner || '-' }}</td>
             <td>
               <span class="badge" [ngClass]="isAvailable(b) ? 'text-bg-success' : 'text-bg-warning'">
