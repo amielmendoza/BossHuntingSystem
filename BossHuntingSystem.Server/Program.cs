@@ -33,8 +33,8 @@ builder.Services.AddCors(options =>
         {
             // Production: Allow your Windows Server domain
             policy.WithOrigins(
-                    "https://risingforcedev.store",
-                    "http://risingforcedev.store",
+                    "https://devdrix.com",
+                    "http://devdrix.com",
                     "https://localhost",
                     "http://localhost")
                   .AllowAnyHeader()

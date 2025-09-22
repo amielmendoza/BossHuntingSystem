@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://risingforcedev.store'
+  apiUrl: 'https://devdrix.com'
 };
