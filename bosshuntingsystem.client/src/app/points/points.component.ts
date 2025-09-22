@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { BossService, MemberPointsDto, DividendsCalculationRequest, DividendsCalculationResult } from '../boss.service';
+import { DateUtilsService } from '../utils/date-utils.service';
 
 @Component({
   selector: 'app-points',
@@ -24,14 +25,19 @@ export class PointsComponent implements OnInit {
   dividendsResult: DividendsCalculationResult | null = null;
   calculatingDividends = false;
 
-  constructor(private bossService: BossService) {}
+  constructor(private bossService: BossService, private dateUtils: DateUtilsService) {}
 
   ngOnInit(): void {
     this.loadMemberPoints();
-    // Set default date range to current week
-    const today = new Date();
-    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-    const endOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + 6);
+    // Set default date range to current week in PHT (GMT+8)
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
+
+    const dayOfWeek = phtToday.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days from Monday, otherwise dayOfWeek - 1
+    const startOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday));
+    const endOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday + 6));
 
     this.startDate = startOfWeek.toISOString().split('T')[0];
     this.endDate = endOfWeek.toISOString().split('T')[0];
@@ -145,7 +151,11 @@ export class PointsComponent implements OnInit {
   // Date filter methods
   setFilterPeriod(period: 'all' | 'week' | 'month' | 'custom'): void {
     this.filterPeriod = period;
-    const today = new Date();
+
+    // Get current date in PHT (GMT+8) timezone
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
 
     switch (period) {
       case 'all':
@@ -153,22 +163,41 @@ export class PointsComponent implements OnInit {
         this.filterEndDate = '';
         break;
       case 'week':
-        const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-        const endOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + 6);
+        const dayOfWeek = phtToday.getDay();
+        // Calculate days to go back to reach Monday
+        // Sunday (0) = go back 6 days to reach Monday of current week
+        // Monday (1) = go back 0 days (already Monday)
+        // Tuesday (2) = go back 1 day, etc.
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const startOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday));
+        const endOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday + 6));
+
+        console.log('[Points] Week calculation:', {
+          phtToday: phtToday.toISOString(),
+          dayOfWeek,
+          daysFromMonday,
+          startOfWeek: startOfWeek.toISOString(),
+          endOfWeek: endOfWeek.toISOString(),
+          startDateString: startOfWeek.toISOString().split('T')[0],
+          endDateString: endOfWeek.toISOString().split('T')[0]
+        });
+
         this.filterStartDate = startOfWeek.toISOString().split('T')[0];
         this.filterEndDate = endOfWeek.toISOString().split('T')[0];
         break;
       case 'month':
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const startOfMonth = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), 1));
+        const endOfMonth = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth() + 1, 0));
         this.filterStartDate = startOfMonth.toISOString().split('T')[0];
         this.filterEndDate = endOfMonth.toISOString().split('T')[0];
         break;
       case 'custom':
         // Keep existing dates or set to current week as default
         if (!this.filterStartDate || !this.filterEndDate) {
-          const defaultStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-          const defaultEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + 6);
+          const dayOfWeekDefault = phtToday.getDay();
+          const daysFromMondayDefault = dayOfWeekDefault === 0 ? 6 : dayOfWeekDefault - 1;
+          const defaultStart = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMondayDefault));
+          const defaultEnd = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMondayDefault + 6));
           this.filterStartDate = defaultStart.toISOString().split('T')[0];
           this.filterEndDate = defaultEnd.toISOString().split('T')[0];
         }

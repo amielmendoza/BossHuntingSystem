@@ -21,7 +21,10 @@
       "Bash(npx ng serve:*)",
       "Bash(dotnet ef dbcontext scaffold:*)",
       "Bash(timeout:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(node:*)",
+      "Bash(netstat:*)",
+      "Bash(ng serve:*)"
     ],
     "deny": [],
     "ask": []

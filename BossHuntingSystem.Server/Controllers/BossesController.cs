@@ -756,19 +756,21 @@ namespace BossHuntingSystem.Server.Controllers
 
                 if (!string.IsNullOrEmpty(startDate) && DateTime.TryParse(startDate, out var start))
                 {
-                    // Set start time to beginning of day (Monday 12:00 AM)
-                    var startDateTime = start.Date;
-                    _logger.LogInformation("Filtering points from start date: {StartDate} (parsed as {StartDateTime})", startDate, startDateTime);
-                    defeatsQuery = defeatsQuery.Where(d => d.DefeatedAtUtc != null && d.DefeatedAtUtc >= startDateTime);
+                    // Frontend sends PHT dates, convert to UTC for database comparison
+                    var startPht = start.Date; // Beginning of day in PHT
+                    var startUtc = ConvertPhtToUtc(startPht);
+                    _logger.LogInformation("Filtering points from start date: {StartDate} (PHT: {StartPht}, UTC: {StartUtc})", startDate, startPht, startUtc);
+                    defeatsQuery = defeatsQuery.Where(d => d.DefeatedAtUtc != null && d.DefeatedAtUtc >= startUtc);
                     hasDateFilter = true;
                 }
 
                 if (!string.IsNullOrEmpty(endDate) && DateTime.TryParse(endDate, out var end))
                 {
-                    // Set end time to end of day (Sunday 11:59:59 PM)
-                    var endDateTime = end.Date.AddDays(1).AddTicks(-1);
-                    _logger.LogInformation("Filtering points to end date: {EndDate} (parsed as {EndDateTime})", endDate, endDateTime);
-                    defeatsQuery = defeatsQuery.Where(d => d.DefeatedAtUtc != null && d.DefeatedAtUtc <= endDateTime);
+                    // Frontend sends PHT dates, convert to UTC for database comparison
+                    var endPht = end.Date.AddDays(1).AddTicks(-1); // End of day in PHT (23:59:59.999)
+                    var endUtc = ConvertPhtToUtc(endPht);
+                    _logger.LogInformation("Filtering points to end date: {EndDate} (PHT: {EndPht}, UTC: {EndUtc})", endDate, endPht, endUtc);
+                    defeatsQuery = defeatsQuery.Where(d => d.DefeatedAtUtc != null && d.DefeatedAtUtc <= endUtc);
                     hasDateFilter = true;
                 }
 
