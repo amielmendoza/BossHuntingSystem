@@ -14,8 +14,11 @@ export class PointsComponent implements OnInit {
 
   // Date filter properties
   filterPeriod: 'all' | 'week' | 'month' | 'custom' = 'all';
+  selectedWeekOffset: number = 0; // 0 = current week, 1 = last week, 2 = two weeks ago, etc.
   filterStartDate: string = '';
   filterEndDate: string = '';
+  weekOptions: { value: number, label: string, dateRange: string }[] = [];
+  private isLoading = false; // Prevent multiple simultaneous API calls
 
   // Dividend calculation properties
   showDividendsCalculator = false;
@@ -28,7 +31,9 @@ export class PointsComponent implements OnInit {
   constructor(private bossService: BossService, private dateUtils: DateUtilsService) {}
 
   ngOnInit(): void {
-    this.loadMemberPoints();
+    // Generate week options once
+    this.generateWeekOptions();
+
     // Set default date range to current week in PHT (GMT+8)
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -36,8 +41,14 @@ export class PointsComponent implements OnInit {
 
     const dayOfWeek = phtToday.getDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days from Monday, otherwise dayOfWeek - 1
-    const startOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday));
-    const endOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday + 6));
+
+    const startOfWeek = new Date(phtToday);
+    startOfWeek.setDate(phtToday.getDate() - daysFromMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
 
     this.startDate = startOfWeek.toISOString().split('T')[0];
     this.endDate = endOfWeek.toISOString().split('T')[0];
@@ -47,6 +58,13 @@ export class PointsComponent implements OnInit {
   }
 
   loadMemberPoints(): void {
+    // Prevent multiple simultaneous API calls
+    if (this.isLoading) {
+      console.log('[PointsComponent] Already loading, skipping duplicate request');
+      return;
+    }
+
+    this.isLoading = true;
     this.loading = true;
 
     // Clear existing data to prevent stale data display
@@ -64,6 +82,7 @@ export class PointsComponent implements OnInit {
 
     console.log('[PointsComponent] Loading member points with filter:', {
       filterPeriod: this.filterPeriod,
+      selectedWeekOffset: this.selectedWeekOffset,
       startDate,
       endDate,
       filterStartDate: this.filterStartDate,
@@ -76,12 +95,20 @@ export class PointsComponent implements OnInit {
         this.memberPoints = points;
         this.filteredMemberPoints = points;
         this.loading = false;
+        this.isLoading = false;
+
+        // Clear previous dividend results since data has changed
+        this.dividendsResult = null;
       },
       error: (error) => {
         console.error('Error loading member points:', error);
         this.memberPoints = [];
         this.filteredMemberPoints = [];
         this.loading = false;
+        this.isLoading = false;
+
+        // Clear dividend results on error
+        this.dividendsResult = null;
       }
     });
   }
@@ -103,25 +130,46 @@ export class PointsComponent implements OnInit {
       return;
     }
 
+    if (this.memberPoints.length === 0) {
+      alert('No member points data available. Please wait for data to load.');
+      return;
+    }
+
     this.calculatingDividends = true;
-    
-    const request: DividendsCalculationRequest = {
+
+    // Use the exact same member points data that's currently displayed
+    const totalPoints = this.memberPoints.reduce((total, member) => total + member.points, 0);
+    const pointsPerPeso = totalPoints > 0 ? this.totalSales / totalPoints : 0;
+
+    console.log('[PointsComponent] Calculating dividends with displayed data:', {
+      filterPeriod: this.filterPeriod,
+      selectedWeekOffset: this.selectedWeekOffset,
       totalSales: this.totalSales,
-      startDate: this.startDate || undefined,
-      endDate: this.endDate || undefined
+      totalPoints,
+      pointsPerPeso,
+      membersCount: this.memberPoints.length
+    });
+
+    // Calculate dividends using the same data that's displayed
+    const memberDividends = this.memberPoints.map(member => ({
+      memberName: member.memberName,
+      points: member.points,
+      dividend: member.points * pointsPerPeso
+    }));
+
+    // Create result object that matches API response format
+    this.dividendsResult = {
+      totalSales: this.totalSales,
+      totalPoints: totalPoints,
+      periodStart: this.filterPeriod !== 'all' && this.filterStartDate ? this.filterStartDate : undefined,
+      periodEnd: this.filterPeriod !== 'all' && this.filterEndDate ? this.filterEndDate : undefined,
+      memberDividends: memberDividends,
+      calculatedAt: new Date().toISOString()
     };
 
-    this.bossService.calculateDividends(request).subscribe({
-      next: (result) => {
-        this.dividendsResult = result;
-        this.calculatingDividends = false;
-      },
-      error: (error) => {
-        console.error('Error calculating dividends:', error);
-        alert('Error calculating dividends: ' + (error.error?.message || error.message || 'Unknown error'));
-        this.calculatingDividends = false;
-      }
-    });
+    this.calculatingDividends = false;
+
+    console.log('[PointsComponent] Dividends calculated:', this.dividendsResult);
   }
 
   getTotalDividends(): number {
@@ -161,54 +209,136 @@ export class PointsComponent implements OnInit {
       case 'all':
         this.filterStartDate = '';
         this.filterEndDate = '';
+        this.applyDateFilter();
         break;
       case 'week':
-        const dayOfWeek = phtToday.getDay();
-        // Calculate days to go back to reach Monday
-        // Sunday (0) = go back 6 days to reach Monday of current week
-        // Monday (1) = go back 0 days (already Monday)
-        // Tuesday (2) = go back 1 day, etc.
-        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const startOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday));
-        const endOfWeek = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMonday + 6));
-
-        console.log('[Points] Week calculation:', {
-          phtToday: phtToday.toISOString(),
-          dayOfWeek,
-          daysFromMonday,
-          startOfWeek: startOfWeek.toISOString(),
-          endOfWeek: endOfWeek.toISOString(),
-          startDateString: startOfWeek.toISOString().split('T')[0],
-          endDateString: endOfWeek.toISOString().split('T')[0]
-        });
-
-        this.filterStartDate = startOfWeek.toISOString().split('T')[0];
-        this.filterEndDate = endOfWeek.toISOString().split('T')[0];
-        break;
+        // Week filter is handled by onWeekSelectionChange, don't apply here
+        this.setWeekFilter(this.selectedWeekOffset);
+        return; // Don't apply filter here, will be done by week selection
       case 'month':
-        const startOfMonth = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), 1));
-        const endOfMonth = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth() + 1, 0));
+        const startOfMonth = new Date(phtToday);
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const endOfMonth = new Date(phtToday.getFullYear(), phtToday.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+
         this.filterStartDate = startOfMonth.toISOString().split('T')[0];
         this.filterEndDate = endOfMonth.toISOString().split('T')[0];
+        this.applyDateFilter();
         break;
       case 'custom':
         // Keep existing dates or set to current week as default
         if (!this.filterStartDate || !this.filterEndDate) {
           const dayOfWeekDefault = phtToday.getDay();
           const daysFromMondayDefault = dayOfWeekDefault === 0 ? 6 : dayOfWeekDefault - 1;
-          const defaultStart = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMondayDefault));
-          const defaultEnd = new Date(Date.UTC(phtToday.getFullYear(), phtToday.getMonth(), phtToday.getDate() - daysFromMondayDefault + 6));
+
+          const defaultStart = new Date(phtToday);
+          defaultStart.setDate(phtToday.getDate() - daysFromMondayDefault);
+          defaultStart.setHours(0, 0, 0, 0);
+
+          const defaultEnd = new Date(defaultStart);
+          defaultEnd.setDate(defaultStart.getDate() + 6);
+          defaultEnd.setHours(23, 59, 59, 999);
+
           this.filterStartDate = defaultStart.toISOString().split('T')[0];
           this.filterEndDate = defaultEnd.toISOString().split('T')[0];
         }
+        this.applyDateFilter();
         break;
     }
-
-    this.applyDateFilter();
   }
 
   applyDateFilter(): void {
     this.loadMemberPoints();
+  }
+
+  setWeekFilter(weeksAgo: number): void {
+    this.selectedWeekOffset = weeksAgo;
+
+    // Get current date in PHT (GMT+8) timezone
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
+
+    const dayOfWeek = phtToday.getDay();
+    // Calculate days to go back to reach Monday
+    // Sunday (0) = go back 6 days to reach Monday of current week
+    // Monday (1) = go back 0 days (already Monday)
+    // Tuesday (2) = go back 1 day, etc.
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+    // Calculate the start of the selected week using regular Date operations
+    const startOfSelectedWeek = new Date(phtToday);
+    startOfSelectedWeek.setDate(phtToday.getDate() - daysFromMonday - (weeksAgo * 7));
+    startOfSelectedWeek.setHours(0, 0, 0, 0); // Start of day
+
+    const endOfSelectedWeek = new Date(startOfSelectedWeek);
+    endOfSelectedWeek.setDate(startOfSelectedWeek.getDate() + 6);
+    endOfSelectedWeek.setHours(23, 59, 59, 999); // End of day
+
+    console.log('[Points] Week calculation:', {
+      phtToday: phtToday.toISOString(),
+      currentYear: phtToday.getFullYear(),
+      dayOfWeek,
+      daysFromMonday,
+      weeksAgo,
+      startOfSelectedWeek: startOfSelectedWeek.toISOString(),
+      endOfSelectedWeek: endOfSelectedWeek.toISOString(),
+      startDateString: startOfSelectedWeek.toISOString().split('T')[0],
+      endDateString: endOfSelectedWeek.toISOString().split('T')[0]
+    });
+
+    this.filterStartDate = startOfSelectedWeek.toISOString().split('T')[0];
+    this.filterEndDate = endOfSelectedWeek.toISOString().split('T')[0];
+  }
+
+  generateWeekOptions(): void {
+    this.weekOptions = [];
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
+
+    for (let i = 0; i < 8; i++) { // Show current week + 7 previous weeks
+      const dayOfWeek = phtToday.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+      // Calculate the start of the week using regular Date operations
+      const startOfWeek = new Date(phtToday);
+      startOfWeek.setDate(phtToday.getDate() - daysFromMonday - (i * 7));
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+      let label = '';
+      if (i === 0) {
+        label = 'This Week';
+      } else if (i === 1) {
+        label = 'Last Week';
+      } else {
+        label = `${i} Weeks Ago`;
+      }
+
+      const dateRange = `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+      this.weekOptions.push({
+        value: i,
+        label: label,
+        dateRange: dateRange
+      });
+    }
+  }
+
+  getWeekOptions(): { value: number, label: string, dateRange: string }[] {
+    return this.weekOptions;
+  }
+
+  onWeekSelectionChange(weeksAgo: number): void {
+    console.log('[PointsComponent] Week selection changed to:', weeksAgo);
+    this.filterPeriod = 'week';
+    this.setWeekFilter(weeksAgo);
+    this.applyDateFilter();
   }
 
   getFilterSummary(): string {
@@ -216,7 +346,13 @@ export class PointsComponent implements OnInit {
       case 'all':
         return 'All Time';
       case 'week':
-        return 'This Week';
+        if (this.selectedWeekOffset === 0) {
+          return 'This Week';
+        } else if (this.selectedWeekOffset === 1) {
+          return 'Last Week';
+        } else {
+          return `${this.selectedWeekOffset} Weeks Ago`;
+        }
       case 'month':
         return 'This Month';
       case 'custom':

@@ -24,7 +24,8 @@
       "Bash(findstr:*)",
       "Bash(node:*)",
       "Bash(netstat:*)",
-      "Bash(ng serve:*)"
+      "Bash(ng serve:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

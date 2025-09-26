@@ -31,12 +31,30 @@
                   (click)="setFilterPeriod('all')">
             All Time
           </button>
-          <button class="btn btn-sm"
-                  [class.btn-primary]="filterPeriod === 'week'"
-                  [class.btn-outline-secondary]="filterPeriod !== 'week'"
-                  (click)="setFilterPeriod('week')">
-            This Week
-          </button>
+          <div class="btn-group" ngbDropdown role="group">
+            <button class="btn btn-sm dropdown-toggle"
+                    [class.btn-primary]="filterPeriod === 'week'"
+                    [class.btn-outline-secondary]="filterPeriod !== 'week'"
+                    type="button"
+                    ngbDropdownToggle
+                    id="weekDropdown">
+              <i class="bi bi-calendar-week me-1"></i>
+              <span *ngIf="filterPeriod === 'week'">{{ getFilterSummary() }}</span>
+              <span *ngIf="filterPeriod !== 'week'">Weeks</span>
+            </button>
+            <div class="dropdown-menu" ngbDropdownMenu aria-labelledby="weekDropdown">
+              <button *ngFor="let option of getWeekOptions()"
+                      class="dropdown-item"
+                      [class.active]="filterPeriod === 'week' && selectedWeekOffset === option.value"
+                      type="button"
+                      (click)="onWeekSelectionChange(option.value)">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-semibold">{{ option.label }}</span>
+                  <small class="text-muted">{{ option.dateRange }}</small>
+                </div>
+              </button>
+            </div>
+          </div>
           <button class="btn btn-sm"
                   [class.btn-primary]="filterPeriod === 'month'"
                   [class.btn-outline-secondary]="filterPeriod !== 'month'"
@@ -256,59 +274,53 @@
       <h6 class="mb-1">
         <i class="bi bi-calculator"></i> Dividends Calculator
       </h6>
-      <div class="small text-muted">Calculate member dividends based on total sales and points earned</div>
+      <div class="small text-muted">Calculate member dividends based on total sales and points earned for the selected period</div>
+      <div class="mt-2">
+        <span class="badge bg-info-subtle text-info">
+          <i class="bi bi-calendar-range me-1"></i>
+          Using Period: {{ getFilterSummary() }}
+        </span>
+      </div>
     </div>
-    
+
     <div class="p-3">
-      <div class="row g-3">
-        <div class="col-md-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-6">
           <label for="totalSales" class="form-label">Total Sales Amount *</label>
           <div class="input-group">
             <span class="input-group-text">₱</span>
-            <input 
-              type="number" 
-              class="form-control" 
-              id="totalSales" 
+            <input
+              type="number"
+              class="form-control"
+              id="totalSales"
               [(ngModel)]="totalSales"
               placeholder="0.00"
               step="0.01"
               min="0">
           </div>
         </div>
-        
-        <div class="col-md-3">
-          <label for="startDate" class="form-label">Start Date (Optional)</label>
-          <input 
-            type="date" 
-            class="form-control" 
-            id="startDate" 
-            [(ngModel)]="startDate">
-        </div>
-        
-        <div class="col-md-3">
-          <label for="endDate" class="form-label">End Date (Optional)</label>
-          <input 
-            type="date" 
-            class="form-control" 
-            id="endDate" 
-            [(ngModel)]="endDate">
-        </div>
-        
-        <div class="col-md-2 d-flex align-items-end">
-          <button 
+
+        <div class="col-md-6">
+          <button
             class="btn btn-primary w-100"
             (click)="calculateDividends()"
             [disabled]="calculatingDividends || !totalSales || totalSales <= 0">
             <span *ngIf="calculatingDividends" class="spinner-border spinner-border-sm me-2"></span>
             <i class="bi bi-play-fill" *ngIf="!calculatingDividends"></i>
-            Calculate
+            Calculate Dividends
           </button>
         </div>
       </div>
-      
-      <div class="small text-muted mt-2">
-        <i class="bi bi-info-circle"></i>
-        Formula: Dividend = (Total Sales ÷ Total Points) × Member Points
+
+      <div class="mt-3">
+        <div class="small text-muted">
+          <i class="bi bi-check-circle-fill text-success me-1"></i>
+          <strong>Guaranteed Match:</strong> Uses exact same points data displayed above ({{ memberPoints.length }} members, {{ getTotalPoints() }} total points)
+        </div>
+        <div class="small text-muted mt-1">
+          <i class="bi bi-calculator me-1"></i>
+          <strong>Formula:</strong> Dividend = (₱{{ totalSales || 0 }} ÷ {{ getTotalPoints() }} points) × Member Points
+        </div>
       </div>
     </div>
 
