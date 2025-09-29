@@ -37,18 +37,18 @@ export class PointsComponent implements OnInit {
     // Set default date range to current week in PHT (GMT+8)
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
+    const phtNow = new Date(utc + (8 * 3600000)); // GMT+8
 
-    const dayOfWeek = phtToday.getDay();
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 6 days from Monday, otherwise dayOfWeek - 1
+    // Extract PHT date string to avoid timezone conversion issues
+    const phtDateString = phtNow.toISOString().split('T')[0];
+    const phtDayOfWeek = phtNow.getDay();
 
-    const startOfWeek = new Date(phtToday);
-    startOfWeek.setDate(phtToday.getDate() - daysFromMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
+    const daysFromMonday = phtDayOfWeek === 0 ? 6 : phtDayOfWeek - 1; // Sunday = 6 days from Monday, otherwise dayOfWeek - 1
 
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
+    // Use UTC date arithmetic to avoid timezone issues
+    const phtDate = new Date(phtDateString + 'T00:00:00.000Z');
+    const startOfWeek = new Date(phtDate.getTime() - (daysFromMonday * 24 * 60 * 60 * 1000));
+    const endOfWeek = new Date(phtDate.getTime() - (daysFromMonday * 24 * 60 * 60 * 1000) + (6 * 24 * 60 * 60 * 1000));
 
     this.startDate = startOfWeek.toISOString().split('T')[0];
     this.endDate = endOfWeek.toISOString().split('T')[0];
@@ -203,7 +203,13 @@ export class PointsComponent implements OnInit {
     // Get current date in PHT (GMT+8) timezone
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
+    const phtNow = new Date(utc + (8 * 3600000)); // GMT+8
+
+    // Extract PHT date components to avoid timezone conversion issues
+    const phtYear = phtNow.getFullYear();
+    const phtMonth = phtNow.getMonth();
+    const phtDate = phtNow.getDate();
+    const phtDayOfWeek = phtNow.getDay();
 
     switch (period) {
       case 'all':
@@ -216,30 +222,27 @@ export class PointsComponent implements OnInit {
         this.setWeekFilter(this.selectedWeekOffset);
         return; // Don't apply filter here, will be done by week selection
       case 'month':
-        const startOfMonth = new Date(phtToday);
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        // Use UTC date arithmetic to avoid timezone issues
+        const phtDateString = phtNow.toISOString().split('T')[0];
+        const [year, month] = phtDateString.split('-').map(Number);
 
-        const endOfMonth = new Date(phtToday.getFullYear(), phtToday.getMonth() + 1, 0);
-        endOfMonth.setHours(23, 59, 59, 999);
+        const startOfMonth = new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00.000Z`);
+        const endOfMonth = new Date(year, month, 0); // Last day of current month (month is 1-based here)
+        const endOfMonthString = endOfMonth.toISOString().split('T')[0];
 
         this.filterStartDate = startOfMonth.toISOString().split('T')[0];
-        this.filterEndDate = endOfMonth.toISOString().split('T')[0];
+        this.filterEndDate = endOfMonthString;
         this.applyDateFilter();
         break;
       case 'custom':
         // Keep existing dates or set to current week as default
         if (!this.filterStartDate || !this.filterEndDate) {
-          const dayOfWeekDefault = phtToday.getDay();
-          const daysFromMondayDefault = dayOfWeekDefault === 0 ? 6 : dayOfWeekDefault - 1;
+          const daysFromMondayDefault = phtDayOfWeek === 0 ? 6 : phtDayOfWeek - 1;
 
-          const defaultStart = new Date(phtToday);
-          defaultStart.setDate(phtToday.getDate() - daysFromMondayDefault);
-          defaultStart.setHours(0, 0, 0, 0);
-
-          const defaultEnd = new Date(defaultStart);
-          defaultEnd.setDate(defaultStart.getDate() + 6);
-          defaultEnd.setHours(23, 59, 59, 999);
+          // Use UTC date arithmetic to avoid timezone issues
+          const phtDateDefault = new Date(phtNow.toISOString().split('T')[0] + 'T00:00:00.000Z');
+          const defaultStart = new Date(phtDateDefault.getTime() - (daysFromMondayDefault * 24 * 60 * 60 * 1000));
+          const defaultEnd = new Date(phtDateDefault.getTime() - (daysFromMondayDefault * 24 * 60 * 60 * 1000) + (6 * 24 * 60 * 60 * 1000));
 
           this.filterStartDate = defaultStart.toISOString().split('T')[0];
           this.filterEndDate = defaultEnd.toISOString().split('T')[0];
@@ -259,57 +262,66 @@ export class PointsComponent implements OnInit {
     // Get current date in PHT (GMT+8) timezone
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
+    const phtNow = new Date(utc + (8 * 3600000)); // GMT+8
 
-    const dayOfWeek = phtToday.getDay();
+    // Extract PHT date string (YYYY-MM-DD) to avoid timezone conversion issues
+    const phtDateString = phtNow.toISOString().split('T')[0];
+    const phtDayOfWeek = phtNow.getDay();
+
     // Calculate days to go back to reach Monday
     // Sunday (0) = go back 6 days to reach Monday of current week
     // Monday (1) = go back 0 days (already Monday)
     // Tuesday (2) = go back 1 day, etc.
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const daysFromMonday = phtDayOfWeek === 0 ? 6 : phtDayOfWeek - 1;
 
-    // Calculate the start of the selected week using regular Date operations
-    const startOfSelectedWeek = new Date(phtToday);
-    startOfSelectedWeek.setDate(phtToday.getDate() - daysFromMonday - (weeksAgo * 7));
-    startOfSelectedWeek.setHours(0, 0, 0, 0); // Start of day
+    // Calculate start of week by going back to Monday, then back by weeksAgo
+    const totalDaysBack = daysFromMonday + (weeksAgo * 7);
 
-    const endOfSelectedWeek = new Date(startOfSelectedWeek);
-    endOfSelectedWeek.setDate(startOfSelectedWeek.getDate() + 6);
-    endOfSelectedWeek.setHours(23, 59, 59, 999); // End of day
+    // Use Date arithmetic but force UTC to avoid timezone issues
+    const phtDate = new Date(phtDateString + 'T00:00:00.000Z'); // Force UTC interpretation
+    const startOfWeek = new Date(phtDate.getTime() - (totalDaysBack * 24 * 60 * 60 * 1000));
+    const endOfWeek = new Date(phtDate.getTime() - (totalDaysBack * 24 * 60 * 60 * 1000) + (6 * 24 * 60 * 60 * 1000));
+
+    // Format as YYYY-MM-DD strings
+    const startDateString = startOfWeek.toISOString().split('T')[0];
+    const endDateString = endOfWeek.toISOString().split('T')[0];
 
     console.log('[Points] Week calculation:', {
-      phtToday: phtToday.toISOString(),
-      currentYear: phtToday.getFullYear(),
-      dayOfWeek,
+      phtNow: phtNow.toISOString(),
+      phtDateString,
+      phtDayOfWeek,
       daysFromMonday,
       weeksAgo,
-      startOfSelectedWeek: startOfSelectedWeek.toISOString(),
-      endOfSelectedWeek: endOfSelectedWeek.toISOString(),
-      startDateString: startOfSelectedWeek.toISOString().split('T')[0],
-      endDateString: endOfSelectedWeek.toISOString().split('T')[0]
+      totalDaysBack,
+      phtDate: phtDate.toISOString(),
+      startOfWeek: startOfWeek.toISOString(),
+      endOfWeek: endOfWeek.toISOString(),
+      startDateString,
+      endDateString
     });
 
-    this.filterStartDate = startOfSelectedWeek.toISOString().split('T')[0];
-    this.filterEndDate = endOfSelectedWeek.toISOString().split('T')[0];
+    this.filterStartDate = startDateString;
+    this.filterEndDate = endDateString;
   }
 
   generateWeekOptions(): void {
     this.weekOptions = [];
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const phtToday = new Date(utc + (8 * 3600000)); // GMT+8
+    const phtNow = new Date(utc + (8 * 3600000)); // GMT+8
+
+    // Extract PHT date string to avoid timezone conversion issues
+    const phtDateString = phtNow.toISOString().split('T')[0];
+    const phtDayOfWeek = phtNow.getDay();
+
+    const daysFromMonday = phtDayOfWeek === 0 ? 6 : phtDayOfWeek - 1;
 
     for (let i = 0; i < 8; i++) { // Show current week + 7 previous weeks
-      const dayOfWeek = phtToday.getDay();
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-      // Calculate the start of the week using regular Date operations
-      const startOfWeek = new Date(phtToday);
-      startOfWeek.setDate(phtToday.getDate() - daysFromMonday - (i * 7));
-      startOfWeek.setHours(0, 0, 0, 0);
-
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      // Use UTC date arithmetic to avoid timezone issues
+      const phtDate = new Date(phtDateString + 'T00:00:00.000Z');
+      const totalDaysBack = daysFromMonday + (i * 7);
+      const startOfWeek = new Date(phtDate.getTime() - (totalDaysBack * 24 * 60 * 60 * 1000));
+      const endOfWeek = new Date(phtDate.getTime() - (totalDaysBack * 24 * 60 * 60 * 1000) + (6 * 24 * 60 * 60 * 1000));
 
       let label = '';
       if (i === 0) {

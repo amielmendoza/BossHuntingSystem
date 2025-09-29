@@ -1,0 +1,44 @@
+.container-fluid {
+  max-width: 1200px;
+}
+
+.card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.alert {
+  border-radius: 6px;
+}
+
+.btn {
+  border-radius: 6px;
+}
+
+.form-select {
+  border-radius: 6px;
+}
+
+.modal-content {
+  border-radius: 8px;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-radius: 8px 8px 0 0;
+}
+
+.text-warning {
+  color: #856404 !important;
+}
+
+.list-group-item {
+  border-radius: 6px !important;
+  margin-bottom: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.list-group-item:last-child {
+  margin-bottom: 0;
+}

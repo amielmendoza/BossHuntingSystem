@@ -253,6 +253,117 @@ namespace BossHuntingSystem.Server.Controllers
                 return StatusCode(500, "Database error occurred");
             }
         }
+
+        [HttpDelete("records/{memberName}")]
+        public async Task<IActionResult> DeleteMemberRecordsByName(string memberName)
+        {
+            _logger.LogInformation("Attempting to delete all boss hunt records for member {MemberName}", memberName);
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(memberName))
+                {
+                    _logger.LogWarning("Attempted to delete records with empty member name");
+                    return BadRequest("Member name is required");
+                }
+
+                _logger.LogInformation("Deleting boss hunt records for member: {MemberName}", memberName);
+
+                // Get all boss defeats
+                var bossDefeats = await _context.BossDefeats.ToListAsync();
+                var recordsModified = 0;
+
+                foreach (var defeat in bossDefeats)
+                {
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    var originalCount = attendeeDetails.Count;
+
+                    // Remove the member from attendee details (case-insensitive)
+                    var updatedAttendees = attendeeDetails
+                        .Where(a => !string.Equals(a.Name.Trim(), memberName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (updatedAttendees.Count != originalCount)
+                    {
+                        defeat.AttendeeDetails = updatedAttendees;
+                        recordsModified++;
+                    }
+                }
+
+                if (recordsModified > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                _logger.LogInformation("Successfully removed member {MemberName} from {RecordsModified} boss hunt records",
+                    memberName, recordsModified);
+
+                return Ok(new {
+                    memberName = memberName,
+                    recordsModified = recordsModified,
+                    message = $"Removed '{memberName}' from {recordsModified} boss hunt records"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete records for member {MemberName}", memberName);
+                return StatusCode(500, "Database error occurred");
+            }
+        }
+
+        [HttpGet("with-boss-hunts")]
+        public async Task<ActionResult<IEnumerable<MemberWithBossHuntsDto>>> GetMembersWithBossHunts()
+        {
+            try
+            {
+                // Get all boss defeats to count participation
+                var bossDefeats = await _context.BossDefeats.ToListAsync();
+
+                // Create a dictionary to count boss hunt participation for each member
+                var memberBossHuntCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var defeat in bossDefeats)
+                {
+                    var attendeeDetails = defeat.AttendeeDetails;
+                    foreach (var attendee in attendeeDetails)
+                    {
+                        var attendeeName = attendee.Name.Trim();
+                        if (memberBossHuntCounts.ContainsKey(attendeeName))
+                        {
+                            memberBossHuntCounts[attendeeName]++;
+                        }
+                        else
+                        {
+                            memberBossHuntCounts[attendeeName] = 1;
+                        }
+                    }
+                }
+
+                // Create DTOs directly from attendance data (no need to match with Members table)
+                var membersWithBossHunts = memberBossHuntCounts
+                    .Select(kvp => new MemberWithBossHuntsDto
+                    {
+                        Id = kvp.Key.GetHashCode(), // Use hash code as a unique identifier
+                        Name = kvp.Key,
+                        CombatPower = 0, // Not available from attendance data
+                        BossHuntsCount = kvp.Value
+                    })
+                    .OrderBy(m => m.Name)
+                    .ToList();
+
+                // Add cache control headers to prevent caching
+                Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                Response.Headers["Pragma"] = "no-cache";
+                Response.Headers["Expires"] = "0";
+
+                return Ok(membersWithBossHunts);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[GetMembersWithBossHunts] Error retrieving members with boss hunts");
+                return StatusCode(500, "Database error occurred");
+            }
+        }
     }
 
     // DTOs
@@ -273,6 +384,14 @@ namespace BossHuntingSystem.Server.Controllers
         public int CombatPower { get; set; }
         public string? GcashNumber { get; set; }
         public string? GcashName { get; set; }
+    }
+
+    public class MemberWithBossHuntsDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int CombatPower { get; set; }
+        public int BossHuntsCount { get; set; }
     }
 
 

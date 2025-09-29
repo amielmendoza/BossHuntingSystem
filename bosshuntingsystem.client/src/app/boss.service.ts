@@ -62,6 +62,13 @@ export interface CreateUpdateMemberDto {
   gcashName?: string;
 }
 
+export interface MemberWithBossHuntsDto {
+  id: number;
+  name: string;
+  combatPower: number;
+  bossHuntsCount: number;
+}
+
 export interface DefeatBossDto {
   owner?: string;
 }
@@ -183,6 +190,14 @@ export class BossService {
 
   deleteMember(id: number): Observable<void> {
     return this.http.delete<void>(this.url(`/api/members/${id}`));
+  }
+
+  getMembersWithBossHunts(): Observable<MemberWithBossHuntsDto[]> {
+    return this.http.get<MemberWithBossHuntsDto[]>(this.url('/api/members/with-boss-hunts'));
+  }
+
+  deleteMemberRecords(memberName: string): Observable<{memberName: string, recordsModified: number, message: string}> {
+    return this.http.delete<{memberName: string, recordsModified: number, message: string}>(this.url(`/api/members/records/${encodeURIComponent(memberName)}`));
   }
 
 

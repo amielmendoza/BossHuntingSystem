@@ -1,0 +1,130 @@
+﻿<div class="container-fluid p-4">
+  <div class="row">
+    <div class="col-12">
+      <h3 class="mb-4">Delete Member Records</h3>
+      <p class="text-warning mb-4">
+        <i class="bi bi-exclamation-triangle"></i>
+        This will remove the selected member from all boss hunt history records and their points will be removed from the points calculation.
+      </p>
+
+      <!-- Error/Success Messages -->
+      <div *ngIf="error" class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-circle"></i> {{error}}
+      </div>
+
+      <div *ngIf="successMessage" class="alert alert-success" role="alert">
+        <i class="bi bi-check-circle"></i> {{successMessage}}
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-4">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading members...</p>
+      </div>
+
+      <!-- Member Selection -->
+      <div *ngIf="!loading" class="row">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Select Member to Remove from Boss Hunts</h5>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label for="memberSelect" class="form-label">Choose a member:</label>
+                <select
+                  id="memberSelect"
+                  class="form-select"
+                  [(ngModel)]="selectedMemberName"
+                  (ngModelChange)="onMemberSelected()">
+                  <option [ngValue]="null">-- Select a member --</option>
+                  <option *ngFor="let member of members" [ngValue]="member.name">
+                    {{member.name}} ({{member.bossHuntsCount}} boss hunts)
+                  </option>
+                </select>
+              </div>
+
+              <div *ngIf="selectedMemberName" class="alert alert-info">
+                <strong>Selected Member:</strong> {{getSelectedMember()?.name}}<br>
+                <strong>Boss Hunts Participated:</strong> {{getSelectedMember()?.bossHuntsCount}}<br>
+                <small class="text-muted">Note: Combat Power is not available from boss hunt records</small>
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-danger"
+                [disabled]="!selectedMemberName"
+                (click)="openConfirmationModal()">
+                <i class="bi bi-trash"></i> Delete Records
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0">Available Members</h6>
+            </div>
+            <div class="card-body">
+              <div *ngIf="members.length === 0" class="text-muted">
+                No members found with boss hunt participation.
+              </div>
+              <div *ngFor="let member of members" class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <strong>{{member.name}}</strong><br>
+                  <small class="text-muted">{{member.bossHuntsCount}} hunts</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" [class.show]="showConfirmationModal" [style.display]="showConfirmationModal ? 'block' : 'none'" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeConfirmationModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <strong>Warning:</strong> This action cannot be undone!
+        </div>
+        <p>Are you sure you want to remove <strong>{{getSelectedMember()?.name}}</strong> from all boss hunt records?</p>
+        <p class="mb-0">This will:</p>
+        <ul>
+          <li>Remove them from {{getSelectedMember()?.bossHuntsCount}} boss hunt records</li>
+          <li>Remove their points from the points calculation</li>
+          <li>Affect dividend calculations that include their participation</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeConfirmationModal()" [disabled]="deleting">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          (click)="deleteMemberRecords()"
+          [disabled]="deleting">
+          <span *ngIf="deleting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <i *ngIf="!deleting" class="bi bi-trash me-2"></i>
+          {{deleting ? 'Deleting...' : 'Delete Records'}}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal backdrop -->
+<div *ngIf="showConfirmationModal" class="modal-backdrop fade show"></div>

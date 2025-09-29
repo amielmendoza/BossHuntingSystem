@@ -6,6 +6,7 @@ import { MembersComponent } from './members/members.component';
 import { PointsComponent } from './points/points.component';
 import { JaeComponent } from './jae/jae.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { MemberDeletionComponent } from './member-deletion/member-deletion.component';
 import { AdminAccessGuard } from './guards/admin-access.guard';
 
 const routes: Routes = [
@@ -14,6 +15,7 @@ const routes: Routes = [
   { path: 'history', component: HistoryComponent, canActivate: [AdminAccessGuard] },
   { path: 'notifications', component: NotificationsComponent, canActivate: [AdminAccessGuard] },
   { path: 'members', component: MembersComponent, canActivate: [AdminAccessGuard] },
+  { path: 'member-deletion', component: MemberDeletionComponent, canActivate: [AdminAccessGuard] },
   { path: 'points', component: PointsComponent, canActivate: [AdminAccessGuard] },
   { path: 'jae', component: JaeComponent, canActivate: [AdminAccessGuard] },
   { path: '**', redirectTo: '/dashboard' }

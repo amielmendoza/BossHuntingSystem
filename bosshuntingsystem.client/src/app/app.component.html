@@ -23,6 +23,10 @@
         <i class="bi bi-people"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">Members</span>
       </a>
+      <a *ngIf="hasAdminAccess" class="item" routerLink="/member-deletion" routerLinkActive="active">
+        <i class="bi bi-person-dash"></i>
+        <span [ngClass]="{'d-none': menu.isOpen}">Delete Records</span>
+      </a>
       <a *ngIf="hasAdminAccess" class="item" routerLink="/points" routerLinkActive="active">
         <i class="bi bi-trophy"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">Points</span>

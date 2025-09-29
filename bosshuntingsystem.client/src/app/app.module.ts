@@ -16,6 +16,7 @@ import { PointsComponent } from './points/points.component';
 import { CacheInterceptor } from './cache-interceptor';
 import { JaeComponent } from './jae/jae.component';
 import { DateUtilsService } from './utils/date-utils.service';
+import { MemberDeletionComponent } from './member-deletion/member-deletion.component';
 
 @NgModule({
   declarations: [
@@ -25,7 +26,8 @@ import { DateUtilsService } from './utils/date-utils.service';
     MembersComponent,
     DashboardComponent,
     PointsComponent,
-    JaeComponent
+    JaeComponent,
+    MemberDeletionComponent
   ],
   imports: [
     BrowserModule, CommonModule, HttpClientModule, FormsModule, ReactiveFormsModule, RouterModule,
