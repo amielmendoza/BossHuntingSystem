@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { BossService, MemberPointsDto, DividendsCalculationRequest, DividendsCalculationResult } from '../boss.service';
 import { DateUtilsService } from '../utils/date-utils.service';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-points',
@@ -395,5 +396,113 @@ export class PointsComponent implements OnInit {
   getHighestFilteredScore(): number {
     if (this.filteredMemberPoints.length === 0) return 0;
     return this.filteredMemberPoints[0]?.points || 0;
+  }
+
+  exportPointsToExcel(): void {
+    if (this.memberPoints.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Prepare data for Excel export
+    const excelData: any[] = this.memberPoints.map((member, index) => ({
+      'Rank': index + 1,
+      'Member Name': member.memberName,
+      'Points': member.points,
+      'Battles': member.bossesAttended,
+      'Performance %': this.getPerformancePercentage(member.points).toFixed(1) + '%'
+    }));
+
+    // Add summary row
+    excelData.push({
+      'Rank': '',
+      'Member Name': '--- SUMMARY ---',
+      'Points': this.getTotalPoints(),
+      'Battles': '',
+      'Performance %': ''
+    });
+
+    // Create workbook and worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+
+    // Set column widths
+    ws['!cols'] = [
+      { width: 8 },  // Rank
+      { width: 20 }, // Member Name
+      { width: 12 }, // Points
+      { width: 12 }, // Battles
+      { width: 15 }  // Performance
+    ];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Member Points');
+
+    // Generate filename with date and filter info
+    const filterSummary = this.getFilterSummary().replace(/\s+/g, '_').replace(/[^\w-]/g, '');
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `member_points_${filterSummary}_${timestamp}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
+  }
+
+  exportDividendsToExcel(): void {
+    if (!this.dividendsResult || this.dividendsResult.memberDividends.length === 0) {
+      alert('No dividends data to export. Please calculate dividends first.');
+      return;
+    }
+
+    // Prepare data for Excel export
+    const excelData: any[] = this.dividendsResult.memberDividends.map((member, index) => ({
+      'Rank': index + 1,
+      'Member Name': member.memberName,
+      'Points': member.points,
+      'Dividend (₱)': member.dividend.toFixed(2),
+      'Points %': ((member.points / this.dividendsResult!.totalPoints) * 100).toFixed(2) + '%'
+    }));
+
+    // Add summary rows
+    excelData.push(
+      { 'Rank': '', 'Member Name': '--- SUMMARY ---', 'Points': '', 'Dividend (₱)': '', 'Points %': '' },
+      { 'Rank': '', 'Member Name': 'Total Sales', 'Points': '', 'Dividend (₱)': this.dividendsResult.totalSales.toFixed(2), 'Points %': '' },
+      { 'Rank': '', 'Member Name': 'Total Points', 'Points': this.dividendsResult.totalPoints, 'Dividend (₱)': '', 'Points %': '100.00%' },
+      { 'Rank': '', 'Member Name': 'Total Dividends', 'Points': '', 'Dividend (₱)': this.getTotalDividends().toFixed(2), 'Points %': '' }
+    );
+
+    // Add period information if available
+    if (this.dividendsResult.periodStart && this.dividendsResult.periodEnd) {
+      excelData.push({
+        'Rank': '',
+        'Member Name': 'Period',
+        'Points': '',
+        'Dividend (₱)': `${this.dividendsResult.periodStart} to ${this.dividendsResult.periodEnd}`,
+        'Points %': ''
+      });
+    }
+
+    // Create workbook and worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+
+    // Set column widths
+    ws['!cols'] = [
+      { width: 8 },  // Rank
+      { width: 20 }, // Member Name
+      { width: 12 }, // Points
+      { width: 15 }, // Dividend
+      { width: 12 }  // Points %
+    ];
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Dividends');
+
+    // Generate filename
+    const timestamp = new Date().toISOString().split('T')[0];
+    const totalSales = this.dividendsResult.totalSales.toLocaleString();
+    const filename = `dividends_₱${totalSales}_${timestamp}.xlsx`;
+
+    // Save file
+    XLSX.writeFile(wb, filename);
   }
 }

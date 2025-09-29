@@ -12,6 +12,10 @@
         <i class="bi bi-calculator me-1"></i>
         <span class="d-none d-sm-inline">Calculate Dividends</span>
       </button>
+      <button class="btn btn-outline-success btn-modern hover-lift button-press" (click)="exportPointsToExcel()" title="Export Points to Excel" [disabled]="memberPoints.length === 0">
+        <i class="bi bi-file-earmark-excel me-1"></i>
+        <span class="d-none d-sm-inline">Export Points</span>
+      </button>
       <button class="btn btn-outline-primary btn-modern hover-lift button-press" (click)="refreshPoints()" title="Refresh points data">
         <i class="bi bi-arrow-clockwise me-1" [class.animate-spin]="loading"></i>
         <span class="d-none d-sm-inline">Refresh</span>
@@ -385,6 +389,9 @@
       </div>
       
       <div class="p-3 bg-light text-center">
+        <button class="btn btn-outline-success btn-sm me-2" (click)="exportDividendsToExcel()" title="Export Dividends to Excel">
+          <i class="bi bi-file-earmark-excel"></i> Export Dividends
+        </button>
         <button class="btn btn-outline-success btn-sm me-2" onclick="window.print()">
           <i class="bi bi-printer"></i> Print Results
         </button>
