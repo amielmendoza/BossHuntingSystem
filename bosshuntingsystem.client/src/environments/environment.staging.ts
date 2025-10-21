@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://www.legacybadmintoncamp.fun'
+  apiUrl: 'https://www.legacybadmintoncamp.fun'
 };

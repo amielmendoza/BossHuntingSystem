@@ -26,18 +26,21 @@
 
 .modal-content {
   border-radius: 0.5rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.7);
+  background-color: var(--sidebar-bg, #18181b);
+  border: 1px solid var(--sidebar-border, #27272a);
+  color: var(--text, #fafafa);
 }
 
 .modal-header {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--gray-100, #27272a);
+  border-bottom: 1px solid var(--sidebar-border, #27272a);
   border-radius: 0.5rem 0.5rem 0 0;
 }
 
 .modal-footer {
-  background-color: #f8f9fa;
-  border-top: 1px solid #dee2e6;
+  background-color: var(--gray-100, #27272a);
+  border-top: 1px solid var(--sidebar-border, #27272a);
   border-radius: 0 0 0.5rem 0.5rem;
 }
 
