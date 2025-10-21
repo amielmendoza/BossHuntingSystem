@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using BossHuntingSystem.Server.Data;
 using BossHuntingSystem.Server.Services;
@@ -10,17 +11,60 @@ namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class BossesController : ControllerBase
     {
         private readonly BossHuntingDbContext _context;
         private readonly IDiscordNotificationService _discordService;
+        private readonly IAuditLogService _auditLogService;
         private readonly ILogger<BossesController> _logger;
 
-        public BossesController(BossHuntingDbContext context, IDiscordNotificationService discordService, ILogger<BossesController> logger)
+        public BossesController(
+            BossHuntingDbContext context,
+            IDiscordNotificationService discordService,
+            IAuditLogService auditLogService,
+            ILogger<BossesController> logger)
         {
             _context = context;
             _discordService = discordService;
+            _auditLogService = auditLogService;
             _logger = logger;
+        }
+
+        // Helper methods for tenant context
+        private int GetCurrentClientId()
+        {
+            var clientId = HttpContext.Items["ClientId"] as int?;
+            if (!clientId.HasValue)
+                throw new UnauthorizedAccessException("Client context not found");
+            return clientId.Value;
+        }
+
+        private string GetCurrentUsername()
+        {
+            return HttpContext.Items["Username"] as string ?? "Unknown";
+        }
+
+        private bool IsSuperAdmin()
+        {
+            return (HttpContext.Items["UserRole"] as string) == "SuperAdmin";
+        }
+
+        // Verify ownership for update/delete operations
+        private async Task<bool> VerifyBossOwnership(int bossId)
+        {
+            if (IsSuperAdmin()) return true;
+
+            var boss = await _context.Bosses.FindAsync(bossId);
+            return boss != null && boss.ClientId == GetCurrentClientId();
+        }
+
+        private async Task<bool> VerifyDefeatOwnership(int defeatId)
+        {
+            if (IsSuperAdmin()) return true;
+
+            var defeat = await _context.BossDefeats.FindAsync(defeatId);
+            return defeat != null && defeat.ClientId == GetCurrentClientId();
         }
 
         // Philippine Time Zone
@@ -213,6 +257,7 @@ namespace BossHuntingSystem.Server.Controllers
 
                 var boss = new Boss
                 {
+                    ClientId = GetCurrentClientId(),
                     Name = dto.Name.Trim(),
                     RespawnHours = dto.RespawnHours,
                     LastKilledAt = lastKilledAtUtc,
@@ -221,6 +266,18 @@ namespace BossHuntingSystem.Server.Controllers
 
                 _context.Bosses.Add(boss);
                 await _context.SaveChangesAsync();
+
+                // Audit log
+                await _auditLogService.LogActionAsync(
+                    boss.ClientId,
+                    GetCurrentUsername(),
+                    "CREATE",
+                    "Boss",
+                    boss.Id,
+                    null,
+                    boss,
+                    HttpContext.Connection.RemoteIpAddress?.ToString()
+                );
 
                 Console.WriteLine($"[Create] Boss created successfully with ID: {boss.Id}, RespawnHours: {boss.RespawnHours}");
                 
@@ -247,8 +304,14 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
+                // Verify ownership
+                if (!await VerifyBossOwnership(id))
+                    return Forbid();
+
                 var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null) return NotFound();
+
+                var oldValues = new { existing.Name, existing.RespawnHours, existing.LastKilledAt, existing.Owner };
 
                 DateTime lastKilledAtUtc;
 
@@ -277,6 +340,18 @@ namespace BossHuntingSystem.Server.Controllers
                 existing.Owner = dto.Owner?.Trim();
 
                 await _context.SaveChangesAsync();
+
+                // Audit log
+                await _auditLogService.LogActionAsync(
+                    existing.ClientId,
+                    GetCurrentUsername(),
+                    "UPDATE",
+                    "Boss",
+                    existing.Id,
+                    oldValues,
+                    new { existing.Name, existing.RespawnHours, existing.LastKilledAt, existing.Owner },
+                    HttpContext.Connection.RemoteIpAddress?.ToString()
+                );
                 
                 // Add cache control headers to prevent caching
                 Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
@@ -299,6 +374,13 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
+                // Verify ownership
+                if (!await VerifyBossOwnership(id))
+                {
+                    _logger.LogWarning("Unauthorized attempt to delete boss {Id}", id);
+                    return Forbid();
+                }
+
                 var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null)
                 {
@@ -308,6 +390,18 @@ namespace BossHuntingSystem.Server.Controllers
 
                 _context.Bosses.Remove(existing);
                 await _context.SaveChangesAsync();
+
+                // Audit log
+                await _auditLogService.LogActionAsync(
+                    existing.ClientId,
+                    GetCurrentUsername(),
+                    "DELETE",
+                    "Boss",
+                    existing.Id,
+                    existing,
+                    null,
+                    HttpContext.Connection.RemoteIpAddress?.ToString()
+                );
 
                 _logger.LogInformation("Successfully deleted boss {Id} with name {Name}", id, existing.Name);
                 return NoContent();
@@ -326,30 +420,61 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
+                // Verify ownership
+                if (!await VerifyBossOwnership(id))
+                {
+                    _logger.LogWarning("Unauthorized attempt to record defeat for boss {Id}", id);
+                    return Forbid();
+                }
+
                 var existing = await _context.Bosses.FindAsync(id);
-                if (existing == null) 
+                if (existing == null)
                 {
                     _logger.LogWarning("Attempted to record defeat for non-existent boss {Id}", id);
                     return NotFound();
                 }
 
-                // When a boss is defeated, we set the last kill time to now (UTC)
-                // Use the same timezone handling as other methods for consistency
-                var currentUtc = DateTime.UtcNow;
-                existing.LastKilledAt = currentUtc;
-                existing.Owner = dto?.Owner?.Trim();
-
-                var defeat = new BossDefeat
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    BossId = existing.Id,
-                    BossName = existing.Name,
-                    DefeatedAtUtc = currentUtc, // Store as UTC for consistency
-                    LootsJson = "[]",
-                    AttendeesJson = "[]"
-                };
+                    // When a boss is defeated, we set the last kill time to now (UTC)
+                    var currentUtc = DateTime.UtcNow;
+                    existing.LastKilledAt = currentUtc;
+                    existing.Owner = dto?.Owner?.Trim();
 
-                _context.BossDefeats.Add(defeat);
-                await _context.SaveChangesAsync();
+                    var defeat = new BossDefeat
+                    {
+                        ClientId = existing.ClientId,
+                        BossId = existing.Id,
+                        BossName = existing.Name,
+                        DefeatedAtUtc = currentUtc,
+                        Owner = dto?.Owner?.Trim(),
+                        LootsJson = "[]",
+                        AttendeesJson = "[]"
+                    };
+
+                    _context.BossDefeats.Add(defeat);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    // Audit log
+                    await _auditLogService.LogActionAsync(
+                        existing.ClientId,
+                        GetCurrentUsername(),
+                        "DEFEAT",
+                        "Boss",
+                        existing.Id,
+                        null,
+                        new { BossId = existing.Id, BossName = existing.Name, DefeatedAt = currentUtc },
+                        HttpContext.Connection.RemoteIpAddress?.ToString()
+                    );
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
 
                 _logger.LogInformation("Successfully recorded defeat for boss {Id} with name {Name}", id, existing.Name);
 
@@ -371,9 +496,13 @@ namespace BossHuntingSystem.Server.Controllers
         public async Task<ActionResult<BossDefeat>> AddHistory(int id, [FromBody] AddHistoryDto? dto = null)
         {
             Console.WriteLine($"[AddHistory] Request received for boss ID: {id}");
-            
+
             try
             {
+                // Verify ownership
+                if (!await VerifyBossOwnership(id))
+                    return Forbid();
+
                 var existing = await _context.Bosses.FindAsync(id);
                 if (existing == null) return NotFound();
 
@@ -381,7 +510,7 @@ namespace BossHuntingSystem.Server.Controllers
 
                 // Create history record with custom time or current datetime
                 DateTime defeatedAtUtc;
-                
+
                 if (!string.IsNullOrEmpty(dto?.DefeatedAt))
                 {
                     // Parse the custom PHT time and convert to UTC
@@ -399,9 +528,10 @@ namespace BossHuntingSystem.Server.Controllers
                     // Use current UTC time if no custom time provided
                     defeatedAtUtc = DateTime.UtcNow;
                 }
-                
+
                 var historyRecord = new BossDefeat
                 {
+                    ClientId = existing.ClientId,
                     BossId = existing.Id,
                     BossName = existing.Name,
                     DefeatedAtUtc = defeatedAtUtc,
@@ -412,6 +542,18 @@ namespace BossHuntingSystem.Server.Controllers
 
                 _context.BossDefeats.Add(historyRecord);
                 await _context.SaveChangesAsync();
+
+                // Audit log
+                await _auditLogService.LogActionAsync(
+                    existing.ClientId,
+                    GetCurrentUsername(),
+                    "ADD_HISTORY",
+                    "BossDefeat",
+                    historyRecord.Id,
+                    null,
+                    historyRecord,
+                    HttpContext.Connection.RemoteIpAddress?.ToString()
+                );
 
                 Console.WriteLine($"[AddHistory] History record created successfully with ID: {historyRecord.Id} at {defeatedAtUtc:yyyy-MM-dd HH:mm:ss} UTC");
 

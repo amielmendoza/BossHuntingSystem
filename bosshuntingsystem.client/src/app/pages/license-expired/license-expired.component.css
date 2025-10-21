@@ -1,0 +1,118 @@
+.license-expired-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.license-expired-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  padding: 50px 40px;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+}
+
+.icon-container {
+  margin-bottom: 24px;
+}
+
+.icon-container i {
+  font-size: 80px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #dc3545;
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #6c757d;
+  margin-bottom: 30px;
+}
+
+.info-box {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.info-box h5 {
+  color: #495057;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.info-box ul {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+
+.info-box li {
+  color: #6c757d;
+}
+
+.expiration-details {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.detail-item:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.detail-item strong {
+  color: #495057;
+}
+
+.detail-item span {
+  color: #6c757d;
+}
+
+.action-buttons {
+  margin: 30px 0 24px;
+}
+
+.btn {
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.btn-outline-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.contact-info {
+  padding-top: 24px;
+  border-top: 1px solid #dee2e6;
+}
+
+.contact-info p {
+  line-height: 1.6;
+}
+
+.alert {
+  text-align: left;
+  border-radius: 8px;
+}

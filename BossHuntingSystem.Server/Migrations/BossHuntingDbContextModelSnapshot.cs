@@ -22,6 +22,61 @@ namespace BossHuntingSystem.Server.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.AuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("AdditionalInfo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("NewValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId", "Timestamp");
+
+                    b.HasIndex("ClientId", "EntityType", "EntityId");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("BossHuntingSystem.Server.Data.Boss", b =>
                 {
                     b.Property<int>("Id")
@@ -29,6 +84,9 @@ namespace BossHuntingSystem.Server.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("LastKilledAt")
                         .HasColumnType("datetime2");
@@ -47,16 +105,9 @@ namespace BossHuntingSystem.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Bosses");
+                    b.HasIndex("ClientId", "Name");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            LastKilledAt = new DateTime(2025, 8, 23, 10, 0, 0, 0, DateTimeKind.Utc),
-                            Name = "Gadwa",
-                            RespawnHours = 1
-                        });
+                    b.ToTable("Bosses");
                 });
 
             modelBuilder.Entity("BossHuntingSystem.Server.Data.BossDefeat", b =>
@@ -83,6 +134,9 @@ namespace BossHuntingSystem.Server.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("DefeatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -102,7 +156,64 @@ namespace BossHuntingSystem.Server.Migrations
 
                     b.HasIndex("BossId");
 
+                    b.HasIndex("ClientId", "DefeatedAtUtc");
+
                     b.ToTable("BossDefeats");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.Client", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("GracePeriodDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LicenseExpirationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LicenseKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LicenseKey")
+                        .IsUnique();
+
+                    b.ToTable("Clients");
                 });
 
             modelBuilder.Entity("BossHuntingSystem.Server.Data.Member", b =>
@@ -112,6 +223,9 @@ namespace BossHuntingSystem.Server.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
 
                     b.Property<int>("CombatPower")
                         .HasColumnType("int");
@@ -137,10 +251,85 @@ namespace BossHuntingSystem.Server.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("ClientId", "Name")
                         .IsUnique();
 
                     b.ToTable("Members");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastLoginDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.HasIndex("ClientId", "Username");
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.AuditLog", b =>
+                {
+                    b.HasOne("BossHuntingSystem.Server.Data.Client", "Client")
+                        .WithMany("AuditLogs")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.Boss", b =>
+                {
+                    b.HasOne("BossHuntingSystem.Server.Data.Client", "Client")
+                        .WithMany("Bosses")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("BossHuntingSystem.Server.Data.BossDefeat", b =>
@@ -151,12 +340,55 @@ namespace BossHuntingSystem.Server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BossHuntingSystem.Server.Data.Client", "Client")
+                        .WithMany("BossDefeats")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Boss");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.Member", b =>
+                {
+                    b.HasOne("BossHuntingSystem.Server.Data.Client", "Client")
+                        .WithMany("Members")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.User", b =>
+                {
+                    b.HasOne("BossHuntingSystem.Server.Data.Client", "Client")
+                        .WithMany("Users")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("BossHuntingSystem.Server.Data.Boss", b =>
                 {
                     b.Navigation("Defeats");
+                });
+
+            modelBuilder.Entity("BossHuntingSystem.Server.Data.Client", b =>
+                {
+                    b.Navigation("AuditLogs");
+
+                    b.Navigation("BossDefeats");
+
+                    b.Navigation("Bosses");
+
+                    b.Navigation("Members");
+
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

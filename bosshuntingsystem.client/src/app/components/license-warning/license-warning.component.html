@@ -1,0 +1,16 @@
+<div *ngIf="showWarning && licenseStatus" class="alert {{ getAlertClass() }} alert-dismissible fade show license-warning" role="alert">
+  <div class="d-flex align-items-center">
+    <i class="bi {{ getIcon() }} me-3 fs-4"></i>
+    <div class="flex-grow-1">
+      <strong *ngIf="licenseStatus.isInGracePeriod">License Expired - Read-Only Mode</strong>
+      <strong *ngIf="!licenseStatus.isInGracePeriod">License Expiring Soon</strong>
+      <p class="mb-0 mt-1">
+        {{ licenseStatus.message }}
+      </p>
+      <small *ngIf="licenseStatus.isInGracePeriod" class="d-block mt-1">
+        Write operations are disabled. Please renew your license to continue using all features.
+      </small>
+    </div>
+    <button type="button" class="btn-close" (click)="dismissWarning()" aria-label="Close"></button>
+  </div>
+</div>

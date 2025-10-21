@@ -1,0 +1,226 @@
+<div class="audit-logs-container">
+  <div class="header">
+    <h2><i class="bi bi-journal-text"></i> Audit Logs</h2>
+    <button class="btn btn-outline-primary" (click)="exportToExcel()" [disabled]="loading">
+      <i class="bi bi-file-earmark-excel"></i> Export to Excel
+    </button>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    {{ error }}
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-card">
+    <h5><i class="bi bi-funnel"></i> Filters</h5>
+    <div class="filters-grid">
+      <div class="filter-item">
+        <label class="form-label">Client ID</label>
+        <input type="number"
+               class="form-control"
+               [(ngModel)]="filterClientId"
+               placeholder="All clients">
+      </div>
+      <div class="filter-item">
+        <label class="form-label">Username</label>
+        <input type="text"
+               class="form-control"
+               [(ngModel)]="filterUsername"
+               placeholder="All users">
+      </div>
+      <div class="filter-item">
+        <label class="form-label">Action</label>
+        <select class="form-select" [(ngModel)]="filterAction">
+          <option value="">All actions</option>
+          <option *ngFor="let action of actions" [value]="action">{{ action }}</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label class="form-label">Entity Type</label>
+        <select class="form-select" [(ngModel)]="filterEntityType">
+          <option value="">All entities</option>
+          <option *ngFor="let type of entityTypes" [value]="type">{{ type }}</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <label class="form-label">Start Date</label>
+        <input type="date"
+               class="form-control"
+               [(ngModel)]="filterStartDate">
+      </div>
+      <div class="filter-item">
+        <label class="form-label">End Date</label>
+        <input type="date"
+               class="form-control"
+               [(ngModel)]="filterEndDate">
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" (click)="applyFilters()" [disabled]="loading">
+        <i class="bi bi-search"></i> Apply Filters
+      </button>
+      <button class="btn btn-outline-secondary" (click)="clearFilters()" [disabled]="loading">
+        <i class="bi bi-x-circle"></i> Clear Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div class="loading-spinner" *ngIf="loading && logs.length === 0">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Logs Table -->
+  <div class="logs-table" *ngIf="!loading || logs.length > 0">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Client</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Entity</th>
+          <th>IP Address</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of filteredLogs">
+          <td>
+            <div>{{ log.timestamp | date: 'short' }}</div>
+            <small class="text-muted">{{ log.timestamp | date: 'mediumDate' }}</small>
+          </td>
+          <td>
+            <strong>ID: {{ log.clientId }}</strong>
+            <br>
+            <small class="text-muted" *ngIf="log.clientName">{{ log.clientName }}</small>
+          </td>
+          <td>{{ log.username }}</td>
+          <td>
+            <span class="badge action-badge {{ getActionClass(log.action) }}">
+              <i class="bi {{ getActionIcon(log.action) }} me-1"></i>
+              {{ log.action }}
+            </span>
+          </td>
+          <td>
+            <div>{{ log.entityType }}</div>
+            <small class="text-muted" *ngIf="log.entityId">ID: {{ log.entityId }}</small>
+          </td>
+          <td>
+            <code>{{ log.ipAddress }}</code>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary"
+                    (click)="showDetails(log)"
+                    title="View Details">
+              <i class="bi bi-eye"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="no-data" *ngIf="filteredLogs.length === 0 && !loading">
+      <i class="bi bi-inbox"></i>
+      <p>No audit logs found matching your criteria.</p>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-controls" *ngIf="filteredLogs.length > 0">
+    <div class="pagination-info">
+      Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, totalLogs) }} of {{ totalLogs }} logs
+    </div>
+    <div class="pagination-buttons">
+      <button class="btn btn-outline-secondary"
+              (click)="previousPage()"
+              [disabled]="currentPage === 1 || loading">
+        <i class="bi bi-chevron-left"></i> Previous
+      </button>
+      <span class="page-indicator">Page {{ currentPage }} of {{ getTotalPages() }}</span>
+      <button class="btn btn-outline-secondary"
+              (click)="nextPage()"
+              [disabled]="currentPage >= getTotalPages() || loading">
+        Next <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal" [class.show]="showDetailsModal" *ngIf="showDetailsModal && selectedLog">
+  <div class="modal-backdrop" (click)="closeDetailsModal()"></div>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-info-circle"></i> Audit Log Details
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDetailsModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-row">
+            <strong>Timestamp:</strong>
+            <span>{{ selectedLog.timestamp | date: 'full' }}</span>
+          </div>
+          <div class="detail-row">
+            <strong>Client ID:</strong>
+            <span>{{ selectedLog.clientId }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedLog.clientName">
+            <strong>Client Name:</strong>
+            <span>{{ selectedLog.clientName }}</span>
+          </div>
+          <div class="detail-row">
+            <strong>Username:</strong>
+            <span>{{ selectedLog.username }}</span>
+          </div>
+          <div class="detail-row">
+            <strong>Action:</strong>
+            <span class="badge action-badge {{ getActionClass(selectedLog.action) }}">
+              <i class="bi {{ getActionIcon(selectedLog.action) }} me-1"></i>
+              {{ selectedLog.action }}
+            </span>
+          </div>
+          <div class="detail-row">
+            <strong>Entity Type:</strong>
+            <span>{{ selectedLog.entityType }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedLog.entityId">
+            <strong>Entity ID:</strong>
+            <span>{{ selectedLog.entityId }}</span>
+          </div>
+          <div class="detail-row">
+            <strong>IP Address:</strong>
+            <code>{{ selectedLog.ipAddress }}</code>
+          </div>
+        </div>
+
+        <div class="changes-section" *ngIf="selectedLog.oldValues || selectedLog.newValues">
+          <h6><i class="bi bi-arrow-left-right"></i> Changes</h6>
+          <div class="row">
+            <div class="col-md-6" *ngIf="selectedLog.oldValues">
+              <div class="values-box old-values">
+                <strong>Old Values:</strong>
+                <pre>{{ formatJson(selectedLog.oldValues) | json }}</pre>
+              </div>
+            </div>
+            <div class="col-md-6" *ngIf="selectedLog.newValues">
+              <div class="values-box new-values">
+                <strong>New Values:</strong>
+                <pre>{{ formatJson(selectedLog.newValues) | json }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeDetailsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

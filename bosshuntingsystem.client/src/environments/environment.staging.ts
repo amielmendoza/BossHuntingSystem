@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://devdrix.com'
+  apiUrl: 'http://legacybadmintoncup.fun'
 };

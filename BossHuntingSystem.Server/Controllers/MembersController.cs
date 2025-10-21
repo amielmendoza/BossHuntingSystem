@@ -1,21 +1,57 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using BossHuntingSystem.Server.Data;
+using BossHuntingSystem.Server.Services;
 using Microsoft.Extensions.Logging;
 
 namespace BossHuntingSystem.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class MembersController : ControllerBase
     {
         private readonly BossHuntingDbContext _context;
+        private readonly IAuditLogService _auditLogService;
         private readonly ILogger<MembersController> _logger;
 
-        public MembersController(BossHuntingDbContext context, ILogger<MembersController> logger)
+        public MembersController(
+            BossHuntingDbContext context,
+            IAuditLogService auditLogService,
+            ILogger<MembersController> logger)
         {
             _context = context;
+            _auditLogService = auditLogService;
             _logger = logger;
+        }
+
+        // Helper methods for tenant context
+        private int GetCurrentClientId()
+        {
+            var clientId = HttpContext.Items["ClientId"] as int?;
+            if (!clientId.HasValue)
+                throw new UnauthorizedAccessException("Client context not found");
+            return clientId.Value;
+        }
+
+        private string GetCurrentUsername()
+        {
+            return HttpContext.Items["Username"] as string ?? "Unknown";
+        }
+
+        private bool IsSuperAdmin()
+        {
+            return (HttpContext.Items["UserRole"] as string) == "SuperAdmin";
+        }
+
+        // Verify ownership for update/delete operations
+        private async Task<bool> VerifyMemberOwnership(int memberId)
+        {
+            if (IsSuperAdmin()) return true;
+
+            var member = await _context.Members.FindAsync(memberId);
+            return member != null && member.ClientId == GetCurrentClientId();
         }
 
         [HttpGet]
@@ -110,18 +146,9 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
-                // Check if member with same name already exists
-                var existingMember = await _context.Members
-                    .FirstOrDefaultAsync(m => m.Name.ToLower() == dto.Name.ToLower());
-                
-                if (existingMember != null)
-                {
-                    _logger.LogWarning("Attempted to create member with duplicate name: {Name}", dto.Name);
-                    return BadRequest($"Member with name '{dto.Name}' already exists");
-                }
-
                 var member = new Member
                 {
+                    ClientId = GetCurrentClientId(),
                     Name = dto.Name.Trim(),
                     CombatPower = dto.CombatPower,
                     GcashNumber = dto.GcashNumber?.Trim(),
@@ -131,7 +158,28 @@ namespace BossHuntingSystem.Server.Controllers
                 };
 
                 _context.Members.Add(member);
-                await _context.SaveChangesAsync();
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("IX_Members_ClientId_Name") == true)
+                {
+                    _logger.LogWarning("Attempted to create member with duplicate name: {Name}", dto.Name);
+                    return BadRequest($"Member with name '{dto.Name}' already exists");
+                }
+
+                // Audit log
+                await _auditLogService.LogActionAsync(
+                    member.ClientId,
+                    GetCurrentUsername(),
+                    "CREATE",
+                    "Member",
+                    member.Id,
+                    null,
+                    member,
+                    HttpContext.Connection.RemoteIpAddress?.ToString()
+                );
 
                 _logger.LogInformation("Successfully created member {Id} with name {Name}", member.Id, member.Name);
 
@@ -160,19 +208,19 @@ namespace BossHuntingSystem.Server.Controllers
         {
             _logger.LogInformation("Attempting to update member {Id}", id);
 
-            if (dto == null) 
+            if (dto == null)
             {
                 _logger.LogWarning("Attempted to update member {Id} with null request body", id);
                 return BadRequest("Request body is required");
             }
-            
-            if (string.IsNullOrWhiteSpace(dto.Name)) 
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 _logger.LogWarning("Attempted to update member {Id} with empty name", id);
                 return BadRequest("Name is required");
             }
-            
-            if (dto.CombatPower < 0) 
+
+            if (dto.CombatPower < 0)
             {
                 _logger.LogWarning("Attempted to update member {Id} with invalid combat power: {CombatPower}", id, dto.CombatPower);
                 return BadRequest("Combat power must be non-negative");
@@ -180,6 +228,13 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
+                // Verify ownership
+                if (!await VerifyMemberOwnership(id))
+                {
+                    _logger.LogWarning("Unauthorized attempt to update member {Id}", id);
+                    return Forbid();
+                }
+
                 var existing = await _context.Members.FindAsync(id);
                 if (existing == null)
                 {
@@ -187,15 +242,7 @@ namespace BossHuntingSystem.Server.Controllers
                     return NotFound();
                 }
 
-                // Check if another member with the same name exists (excluding current member)
-                var duplicateMember = await _context.Members
-                    .FirstOrDefaultAsync(m => m.Id != id && m.Name.ToLower() == dto.Name.ToLower());
-                
-                if (duplicateMember != null)
-                {
-                    _logger.LogWarning("Attempted to update member {Id} with duplicate name: {Name}", id, dto.Name);
-                    return BadRequest($"Another member with name '{dto.Name}' already exists");
-                }
+                var oldValues = new { existing.Name, existing.CombatPower, existing.GcashNumber, existing.GcashName };
 
                 existing.Name = dto.Name.Trim();
                 existing.CombatPower = dto.CombatPower;
@@ -203,7 +250,27 @@ namespace BossHuntingSystem.Server.Controllers
                 existing.GcashName = dto.GcashName?.Trim();
                 existing.UpdatedAtUtc = DateTime.UtcNow;
 
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("IX_Members_ClientId_Name") == true)
+                {
+                    _logger.LogWarning("Attempted to update member {Id} with duplicate name: {Name}", id, dto.Name);
+                    return BadRequest($"Another member with name '{dto.Name}' already exists");
+                }
+
+                // Audit log
+                await _auditLogService.LogActionAsync(
+                    existing.ClientId,
+                    GetCurrentUsername(),
+                    "UPDATE",
+                    "Member",
+                    existing.Id,
+                    oldValues,
+                    new { existing.Name, existing.CombatPower, existing.GcashNumber, existing.GcashName },
+                    HttpContext.Connection.RemoteIpAddress?.ToString()
+                );
 
                 _logger.LogInformation("Successfully updated member {Id}", id);
 
@@ -234,6 +301,13 @@ namespace BossHuntingSystem.Server.Controllers
 
             try
             {
+                // Verify ownership
+                if (!await VerifyMemberOwnership(id))
+                {
+                    _logger.LogWarning("Unauthorized attempt to delete member {Id}", id);
+                    return Forbid();
+                }
+
                 var existing = await _context.Members.FindAsync(id);
                 if (existing == null)
                 {
@@ -243,6 +317,18 @@ namespace BossHuntingSystem.Server.Controllers
 
                 _context.Members.Remove(existing);
                 await _context.SaveChangesAsync();
+
+                // Audit log
+                await _auditLogService.LogActionAsync(
+                    existing.ClientId,
+                    GetCurrentUsername(),
+                    "DELETE",
+                    "Member",
+                    existing.Id,
+                    existing,
+                    null,
+                    HttpContext.Connection.RemoteIpAddress?.ToString()
+                );
 
                 _logger.LogInformation("Successfully deleted member {Id} with name {Name}", id, existing.Name);
                 return NoContent();

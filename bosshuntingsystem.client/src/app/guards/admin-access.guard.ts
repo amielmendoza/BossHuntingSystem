@@ -14,11 +14,11 @@ export class AdminAccessGuard implements CanActivate {
   ) {}
 
   canActivate(): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    if (this.accessControl.hasAdminAccess()) {
+    if (this.accessControl.hasManagerAccess()) {
       return true;
     }
-    
-    // Redirect to dashboard if no admin access
+
+    // Redirect to dashboard if no manager access
     console.warn('Access denied: Redirecting to dashboard');
     return this.router.createUrlTree(['/dashboard']);
   }

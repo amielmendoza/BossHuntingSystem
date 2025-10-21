@@ -25,7 +25,13 @@
       "Bash(node:*)",
       "Bash(netstat:*)",
       "Bash(ng serve:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(npm start:*)",
+      "Bash(npm install:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet script:*)",
+      "Bash(dotnet dev-certs:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

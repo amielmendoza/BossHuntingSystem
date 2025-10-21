@@ -1,4 +1,5 @@
-﻿<div class="d-flex p-2 gap-2 w-full vh-100">
+<!-- Full layout for authenticated users -->
+<div *ngIf="isLoggedIn" class="d-flex p-2 gap-2 w-full vh-100">
   <!-- Left Sidebar (kept minimal) -->
   <aside class="sidebar d-none d-md-block w-10 h-100" [ngClass]="{'w-auto': menu.isOpen}">
     <div class="brand">
@@ -10,48 +11,73 @@
     <div class="nav-group">
       <!-- Dashboard is always visible -->
       <a class="item" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        <i class="bi bi-grid-1x2"></i> 
+        <i class="bi bi-grid-1x2"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">Dashboard</span>
       </a>
-      
-      <!-- Conditional navigation items - only show if admin access is granted -->
-      <a *ngIf="hasAdminAccess" class="item" routerLink="/history" routerLinkActive="active">
-        <i class="bi bi-clock-history"></i> 
+
+      <!-- Conditional navigation items - show if manager access or higher is granted -->
+      <a *ngIf="hasManagerAccess" class="item" routerLink="/history" routerLinkActive="active">
+        <i class="bi bi-clock-history"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">History</span>
       </a>
-      <a *ngIf="hasAdminAccess" class="item" routerLink="/members" routerLinkActive="active">
+      <a *ngIf="hasManagerAccess" class="item" routerLink="/members" routerLinkActive="active">
         <i class="bi bi-people"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">Members</span>
       </a>
-      <a *ngIf="hasAdminAccess" class="item" routerLink="/member-deletion" routerLinkActive="active">
+      <a *ngIf="hasManagerAccess" class="item" routerLink="/member-deletion" routerLinkActive="active">
         <i class="bi bi-person-dash"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">Delete Records</span>
       </a>
-      <a *ngIf="hasAdminAccess" class="item" routerLink="/points" routerLinkActive="active">
+      <a *ngIf="hasManagerAccess" class="item" routerLink="/points" routerLinkActive="active">
         <i class="bi bi-trophy"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">Points</span>
       </a>
-      <a *ngIf="hasAdminAccess" class="item" routerLink="/notifications" routerLinkActive="active">
-        <i class="bi bi-bell"></i> 
+      <a *ngIf="hasManagerAccess" class="item" routerLink="/notifications" routerLinkActive="active">
+        <i class="bi bi-bell"></i>
         <span [ngClass]="{'d-none': menu.isOpen}">Notifications</span>
+      </a>
+
+      <!-- Admin Section -->
+      <div *ngIf="isAdmin || isSuperAdmin" class="nav-divider"></div>
+      <div *ngIf="isAdmin || isSuperAdmin" class="nav-section-title">
+        <span [ngClass]="{'d-none': menu.isOpen}">ADMIN</span>
+      </div>
+
+      <a *ngIf="isAdmin || isSuperAdmin" class="item" routerLink="/admin/users" routerLinkActive="active">
+        <i class="bi bi-person-badge"></i>
+        <span [ngClass]="{'d-none': menu.isOpen}">Users</span>
+      </a>
+      <a *ngIf="isAdmin || isSuperAdmin" class="item" routerLink="/admin/audit-logs" routerLinkActive="active">
+        <i class="bi bi-journal-text"></i>
+        <span [ngClass]="{'d-none': menu.isOpen}">Audit Logs</span>
+      </a>
+      <a *ngIf="isSuperAdmin" class="item" routerLink="/admin/clients" routerLinkActive="active">
+        <i class="bi bi-building"></i>
+        <span [ngClass]="{'d-none': menu.isOpen}">Clients</span>
       </a>
     </div>
   </aside>
 
   <!-- Main Content -->
   <section class="w-100 h-100 overflow-auto">
+    <!-- License Warning Banner -->
+    <app-license-warning></app-license-warning>
+
     <div class="topbar w-100">
       <div class="d-flex align-items-center gap-2">
         <h5 class="mb-0">{{name.route}}</h5>
         <!-- Show access status for debugging -->
-        <small *ngIf="!hasAdminAccess && isRestrictedRoute()" class="text-warning ms-auto">
+        <small *ngIf="!hasManagerAccess && isRestrictedRoute()" class="text-warning ms-auto">
           Access Restricted
         </small>
+        <button class="btn btn-sm btn-outline-secondary ms-auto" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
       </div>
     </div>
 
     <!-- Show access denied message for restricted pages -->
-    <div *ngIf="!hasAdminAccess && isRestrictedRoute()" class="container-fluid p-4">
+    <div *ngIf="!hasManagerAccess && isRestrictedRoute()" class="container-fluid p-4">
       <div class="alert alert-warning" role="alert">
         <h4 class="alert-heading">Access Restricted</h4>
         <p>This page is restricted. Contact an administrator for access.</p>
@@ -61,8 +87,13 @@
     </div>
 
     <!-- Route outlet for all pages - conditional rendering for restricted pages -->
-    <div *ngIf="hasAdminAccess || !isRestrictedRoute()">
+    <div *ngIf="hasManagerAccess || !isRestrictedRoute()">
       <router-outlet></router-outlet>
     </div>
   </section>
+</div>
+
+<!-- Simple layout for public pages (login, license-expired) -->
+<div *ngIf="!isLoggedIn" class="vh-100">
+  <router-outlet></router-outlet>
 </div>

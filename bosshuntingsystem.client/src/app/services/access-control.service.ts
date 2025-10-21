@@ -4,87 +4,56 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class AccessControlService {
-  private readonly SECRET_KEY = 'bh_admin_access';
-  private readonly SECRET_VALUE = 'parak2024';
-
   constructor() { }
 
   /**
-   * Check if the user has admin access based on session storage
+   * Check if the user has admin access based on JWT role
+   * This now reads directly from localStorage to avoid circular dependency
    */
   hasAdminAccess(): boolean {
     try {
-      const storedValue = sessionStorage.getItem(this.SECRET_KEY);
-      return storedValue === this.SECRET_VALUE;
+      const userJson = localStorage.getItem('user_info');
+      if (!userJson) {
+        return false;
+      }
+      const user = JSON.parse(userJson);
+      // Admin and SuperAdmin roles have admin access
+      return user.role === 'Admin' || user.role === 'SuperAdmin';
     } catch (error) {
-      console.warn('Session storage not available:', error);
       return false;
     }
   }
 
   /**
-   * Set admin access in session storage
-   * This can be called from browser console: window.setAdminAccess()
+   * Check if the user has manager access (can see all pages except admin-only pages)
    */
-  setAdminAccess(): boolean {
+  hasManagerAccess(): boolean {
     try {
-      sessionStorage.setItem(this.SECRET_KEY, this.SECRET_VALUE);
-      console.log('Admin access granted for this session');
-      return true;
+      const userJson = localStorage.getItem('user_info');
+      if (!userJson) {
+        return false;
+      }
+      const user = JSON.parse(userJson);
+      // Manager, Admin, and SuperAdmin roles have manager-level access
+      return user.role === 'Manager' || user.role === 'Admin' || user.role === 'SuperAdmin';
     } catch (error) {
-      console.error('Failed to set admin access:', error);
       return false;
     }
   }
 
   /**
-   * Remove admin access from session storage
-   */
-  removeAdminAccess(): void {
-    try {
-      sessionStorage.removeItem(this.SECRET_KEY);
-      console.log('Admin access removed');
-    } catch (error) {
-      console.error('Failed to remove admin access:', error);
-    }
-  }
-
-  /**
-   * Initialize global access method for browser console
+   * Initialize console logging (removed emergency access methods for security)
    */
   initGlobalAccessMethod(): void {
-    // Make the setAdminAccess method available globally for console access
-    (window as any).setAdminAccess = () => {
-      const result = this.setAdminAccess();
-      if (result) {
-        // Trigger a page reload to update the UI
-        window.location.reload();
-      }
-      return result;
-    };
-
-    (window as any).removeAdminAccess = () => {
-      this.removeAdminAccess();
-      // Trigger a page reload to update the UI
-      window.location.reload();
-    };
-
-    (window as any).checkAdminAccess = () => {
-      const hasAccess = this.hasAdminAccess();
-      console.log(`Admin access: ${hasAccess ? 'GRANTED' : 'DENIED'}`);
-      return hasAccess;
-    };
-
-    // Show helpful console message
+    // Show system info in console
     console.log(`
-🔐 Boss Hunting System - Access Control
-=====================================
-Commands available:
-• setAdminAccess()    - Grant admin access for this session
-• removeAdminAccess() - Remove admin access
-• checkAdminAccess()  - Check current access status
+🔐 Boss Hunting System - Multi-Tenant Edition
+==============================================
+Authentication: JWT-based with role-based access control
+Roles: SuperAdmin, Admin, Manager, User
 
-Current status: ${this.hasAdminAccess() ? 'ADMIN ACCESS GRANTED' : 'PUBLIC ACCESS ONLY'}
+Access is now managed through proper authentication.
+Login at /login to access the system.
 `);
   }
 }

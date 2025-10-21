@@ -1,0 +1,193 @@
+<div class="clients-container">
+  <div class="header">
+    <h2><i class="bi bi-building"></i> Client Management</h2>
+    <div class="header-actions">
+      <button class="btn btn-outline-primary" (click)="exportToExcel()" [disabled]="loading">
+        <i class="bi bi-file-earmark-excel"></i> Export to Excel
+      </button>
+      <button class="btn btn-primary" (click)="openCreateModal()" [disabled]="loading">
+        <i class="bi bi-plus-circle"></i> Add New Client
+      </button>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    {{ error }}
+  </div>
+
+  <div class="loading-spinner" *ngIf="loading && clients.length === 0">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <div class="clients-table" *ngIf="!loading || clients.length > 0">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Client Name</th>
+          <th>Contact Email</th>
+          <th>License Key</th>
+          <th>Expiration Date</th>
+          <th>Status</th>
+          <th>Grace Period</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let client of clients">
+          <td>
+            <strong>{{ client.name }}</strong>
+            <br>
+            <small class="text-muted">Created: {{ client.createdDate | date: 'mediumDate' }}</small>
+          </td>
+          <td>{{ client.contactEmail }}</td>
+          <td>
+            <code class="license-key">{{ client.licenseKey }}</code>
+            <button class="btn btn-sm btn-outline-secondary ms-2"
+                    (click)="copyLicenseKey(client.licenseKey)"
+                    title="Copy to clipboard">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </td>
+          <td>{{ client.licenseExpirationDate | date: 'mediumDate' }}</td>
+          <td>
+            <span class="badge {{ getStatusClass(client) }}">
+              {{ getStatusText(client) }}
+            </span>
+          </td>
+          <td>{{ client.gracePeriodDays }} days</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn btn-sm btn-success"
+                      (click)="openRenewModal(client)"
+                      [disabled]="loading"
+                      title="Renew License">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+              <button class="btn btn-sm"
+                      [ngClass]="client.isActive ? 'btn-warning' : 'btn-info'"
+                      (click)="toggleActive(client)"
+                      [disabled]="loading"
+                      [title]="client.isActive ? 'Deactivate' : 'Activate'">
+                <i class="bi" [ngClass]="client.isActive ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="no-data" *ngIf="clients.length === 0 && !loading">
+      <i class="bi bi-inbox"></i>
+      <p>No clients found. Create your first client to get started.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Create Client Modal -->
+<div class="modal" [class.show]="showCreateModal" *ngIf="showCreateModal">
+  <div class="modal-backdrop" (click)="closeCreateModal()"></div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Create New Client</h5>
+        <button type="button" class="btn-close" (click)="closeCreateModal()"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+            <label class="form-label">Client Name *</label>
+            <input type="text"
+                   class="form-control"
+                   [(ngModel)]="newClient.name"
+                   name="name"
+                   placeholder="Enter client name"
+                   required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Contact Email *</label>
+            <input type="email"
+                   class="form-control"
+                   [(ngModel)]="newClient.contactEmail"
+                   name="email"
+                   placeholder="contact@example.com"
+                   required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">License Expiration Date *</label>
+            <input type="date"
+                   class="form-control"
+                   [(ngModel)]="newClient.licenseExpirationDate"
+                   name="expirationDate"
+                   required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Grace Period (days)</label>
+            <input type="number"
+                   class="form-control"
+                   [(ngModel)]="newClient.gracePeriodDays"
+                   name="gracePeriod"
+                   min="0"
+                   max="30">
+            <small class="text-muted">Number of days users can access in read-only mode after license expires</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
+        <button type="button"
+                class="btn btn-primary"
+                (click)="createClient()"
+                [disabled]="loading || !newClient.name || !newClient.contactEmail">
+          <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
+          Create Client
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Renew License Modal -->
+<div class="modal" [class.show]="showRenewModal" *ngIf="showRenewModal">
+  <div class="modal-backdrop" (click)="closeRenewModal()"></div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Renew License - {{ selectedClient?.name }}</h5>
+        <button type="button" class="btn-close" (click)="closeRenewModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <strong>Current Expiration:</strong> {{ selectedClient?.licenseExpirationDate | date: 'mediumDate' }}
+        </div>
+        <form>
+          <div class="mb-3">
+            <label class="form-label">Extend License By (months)</label>
+            <input type="number"
+                   class="form-control"
+                   [(ngModel)]="renewMonths"
+                   name="renewMonths"
+                   min="1"
+                   max="60">
+          </div>
+          <div class="alert alert-success" *ngIf="selectedClient">
+            <strong>New Expiration Date:</strong>
+            {{ calculateNewExpirationDate(selectedClient.licenseExpirationDate, renewMonths) | date: 'mediumDate' }}
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeRenewModal()">Cancel</button>
+        <button type="button"
+                class="btn btn-success"
+                (click)="renewLicense()"
+                [disabled]="loading || renewMonths < 1">
+          <span class="spinner-border spinner-border-sm me-2" *ngIf="loading"></span>
+          Renew License
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

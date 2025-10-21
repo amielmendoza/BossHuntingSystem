@@ -1,9 +1,7 @@
 const { env } = require('process');
 
 // Determine the target based on environment variables or use the correct default ports
-const target = env.ASPNETCORE_HTTP_PORT ? `http://localhost:${env.ASPNETCORE_HTTP_PORT}` :
-               env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}` :
-               'http://localhost:5077'; // Updated to match actual running port
+const target = 'https://localhost:7294';
 
 console.log(`[Proxy] Using target: ${target}`);
 
@@ -11,13 +9,22 @@ const PROXY_CONFIG = {
   "/api/*": {
     "target": target,
     "secure": false,
-    "changeOrigin": true,
-    "logLevel": "debug"
+    "changeOrigin": false,
+    "logLevel": "debug",
+    "headers": {
+      "Connection": "keep-alive"
+    },
+    "onProxyReq": (proxyReq, req, res) => {
+      // Preserve Authorization header
+      if (req.headers.authorization) {
+        proxyReq.setHeader('Authorization', req.headers.authorization);
+      }
+    }
   },
   "/weatherforecast": {
     "target": target,
     "secure": false,
-    "changeOrigin": true,
+    "changeOrigin": false,
     "logLevel": "debug"
   }
 };

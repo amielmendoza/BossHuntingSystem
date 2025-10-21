@@ -1,0 +1,53 @@
+.license-warning {
+  margin: 0;
+  border-radius: 0;
+  border: none;
+  border-bottom: 3px solid;
+  animation: slideDown 0.3s ease-out;
+}
+
+.alert-danger.license-warning {
+  background-color: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.alert-warning.license-warning {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.alert-info.license-warning {
+  background-color: #d1ecf1;
+  border-color: #17a2b8;
+  color: #0c5460;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.license-warning .btn-close {
+  padding: 0.5rem;
+}
+
+.license-warning strong {
+  font-size: 1.1rem;
+}
+
+.license-warning p {
+  font-size: 0.95rem;
+}
+
+.license-warning small {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}

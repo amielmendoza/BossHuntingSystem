@@ -7,38 +7,44 @@ namespace BossHuntingSystem.Server.Data
     {
         [Key]
         public int Id { get; set; }
-        
+
+        [Required]
+        public int ClientId { get; set; }
+
         [Required]
         public int BossId { get; set; }
-        
+
         [Required]
         [MaxLength(100)]
         public string BossName { get; set; } = string.Empty;
-        
+
         // Nullable DateTime - null for history entries, actual time for defeats
         public DateTime? DefeatedAtUtc { get; set; }
-        
+
         // Store loots and attendees as JSON strings
         [Column(TypeName = "nvarchar(max)")]
         public string LootsJson { get; set; } = "[]";
-        
+
         [Column(TypeName = "nvarchar(max)")]
         public string AttendeesJson { get; set; } = "[]";
-        
+
         // New property for loot items with prices
         [Column(TypeName = "nvarchar(max)")]
         public string LootItemsJson { get; set; } = "[]";
-        
+
         // New property for detailed attendee information (includes late status)
         [Column(TypeName = "nvarchar(max)")]
         public string AttendeeDetailsJson { get; set; } = "[]";
-        
+
         [MaxLength(100)]
         public string? Owner { get; set; }
-        
-        // Navigation property
+
+        // Navigation properties
         [ForeignKey("BossId")]
         public virtual Boss? Boss { get; set; }
+
+        [ForeignKey("ClientId")]
+        public virtual Client? Client { get; set; }
         
         // Not mapped properties for easy access (will be serialized to/from JSON)
         [NotMapped]
