@@ -66,14 +66,37 @@
   --radius-xl: 1.5rem;
 }
 
-body { 
-  background: var(--page-bg); 
+body {
+  background: var(--page-bg);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: var(--text);
+  color: var(--text) !important;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global text color overrides for dark mode */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text) !important;
+}
+
+p, span, div, label {
+  color: inherit;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-dark {
+  color: var(--text) !important;
+}
+
+/* Card text visibility */
+.cardx h1, .cardx h2, .cardx h3, .cardx h4, .cardx h5, .cardx h6,
+.cardx p, .cardx span, .cardx div, .cardx label {
+  color: var(--text);
 }
 
 .layout {
@@ -271,14 +294,47 @@ body {
 }
 
 .btn-outline-secondary {
-  border: 1px solid var(--gray-300);
-  color: var(--gray-600);
-  background: transparent;
+  border: 1px solid var(--gray-400) !important;
+  color: var(--gray-600) !important;
+  background: transparent !important;
 }
 
 .btn-outline-secondary:hover {
-  background: var(--gray-50);
-  border-color: var(--gray-400);
+  background: var(--gray-200) !important;
+  border-color: var(--gray-500) !important;
+  color: var(--gray-700) !important;
+}
+
+.btn-outline-danger {
+  border: 1px solid var(--danger-500) !important;
+  color: var(--danger-500) !important;
+  background: transparent !important;
+}
+
+.btn-outline-danger:hover {
+  background: var(--danger-500) !important;
+  border-color: var(--danger-500) !important;
+  color: white !important;
+}
+
+.btn-danger {
+  background: var(--danger-500) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.btn-danger:hover {
+  background: #dc2626 !important;
+}
+
+.btn-info {
+  background: #3b82f6 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.btn-info:hover {
+  background: #2563eb !important;
 }
 
 /* Modern Table Styles */
@@ -287,16 +343,17 @@ body {
   border-spacing: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
+  color: var(--text) !important;
 }
 
 .table thead th {
-  background: var(--gray-100);
+  background: var(--gray-100) !important;
   border: none;
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--text-muted) !important;
   padding: 16px;
 }
 
@@ -304,11 +361,20 @@ body {
   border-top: 1px solid var(--gray-200);
   padding: 16px;
   vertical-align: middle;
-  color: var(--text);
+  color: var(--text) !important;
+  background-color: transparent;
+}
+
+.table tbody tr {
+  background-color: transparent;
 }
 
 .table tbody tr:hover {
-  background: var(--gray-100);
+  background: var(--gray-100) !important;
+}
+
+.table tbody tr:hover td {
+  background-color: transparent;
 }
 
 /* Badge Improvements */
@@ -336,19 +402,55 @@ body {
 
 /* Form Controls */
 .form-control {
-  border: 1px solid var(--gray-300);
+  border: 1px solid var(--gray-300) !important;
   border-radius: var(--radius-md);
   padding: 12px 16px;
   font-size: 14px;
   transition: all 0.2s ease;
-  background: var(--gray-100);
-  color: var(--text);
+  background: var(--gray-100) !important;
+  color: var(--text) !important;
 }
 
 .form-control:focus {
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px var(--primary-100);
-  background: var(--gray-50);
+  border-color: var(--primary-500) !important;
+  box-shadow: 0 0 0 3px var(--primary-100) !important;
+  background: var(--gray-50) !important;
+}
+
+.form-control::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.form-label {
+  color: var(--text) !important;
+  font-weight: 500;
+}
+
+.form-select {
+  background: var(--gray-100) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--gray-300) !important;
+}
+
+.form-select:focus {
+  border-color: var(--primary-500) !important;
+  box-shadow: 0 0 0 3px var(--primary-100) !important;
+}
+
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+  background: var(--gray-100) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--gray-300) !important;
+  color-scheme: dark;
+}
+
+input[type="datetime-local"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus {
+  border-color: var(--primary-500) !important;
+  box-shadow: 0 0 0 3px var(--primary-100) !important;
 }
 
 /* Responsive Design */
@@ -551,3 +653,41 @@ html {
 .stagger-animation > *:nth-child(3) { animation-delay: 0.3s; }
 .stagger-animation > *:nth-child(4) { animation-delay: 0.4s; }
 .stagger-animation > *:nth-child(5) { animation-delay: 0.5s; }
+
+/* Bootstrap Modal Overrides for Dark Mode */
+.modal-content {
+  background-color: var(--sidebar-bg) !important;
+  border: 1px solid var(--sidebar-border) !important;
+  color: var(--text) !important;
+}
+
+.modal-header {
+  background-color: var(--gray-100) !important;
+  border-bottom: 1px solid var(--sidebar-border) !important;
+  color: var(--text) !important;
+}
+
+.modal-title {
+  color: var(--text) !important;
+}
+
+.modal-body {
+  color: var(--text) !important;
+}
+
+.modal-footer {
+  background-color: var(--gray-100) !important;
+  border-top: 1px solid var(--sidebar-border) !important;
+}
+
+.modal-backdrop {
+  background-color: #000 !important;
+}
+
+.modal-backdrop.show {
+  opacity: 0.7 !important;
+}
+
+.btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
