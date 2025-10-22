@@ -691,3 +691,173 @@ html {
 .btn-close {
   filter: invert(1) grayscale(100%) brightness(200%);
 }
+
+/* Bootstrap Alert Overrides for Dark Mode */
+.alert {
+  border: 1px solid;
+  color: var(--text) !important;
+}
+
+.alert-danger {
+  background-color: var(--danger-100) !important;
+  border-color: var(--danger-500) !important;
+  color: var(--danger-500) !important;
+}
+
+.alert-warning {
+  background-color: var(--warning-100) !important;
+  border-color: var(--warning-500) !important;
+  color: var(--warning-500) !important;
+}
+
+.alert-info {
+  background-color: var(--primary-100) !important;
+  border-color: var(--primary-500) !important;
+  color: var(--primary-500) !important;
+}
+
+.alert-success {
+  background-color: var(--success-100) !important;
+  border-color: var(--success-500) !important;
+  color: var(--success-500) !important;
+}
+
+/* Empty State Styling */
+.text-muted,
+.text-secondary {
+  color: var(--text-muted) !important;
+}
+
+/* Badge text color fix */
+.badge {
+  color: white !important;
+}
+
+.badge.bg-primary,
+.badge.text-bg-primary {
+  background-color: var(--primary-500) !important;
+}
+
+.badge.bg-info,
+.badge.text-bg-info {
+  background-color: #3b82f6 !important;
+}
+
+/* Card Styling for Dark Mode */
+.card {
+  background-color: var(--sidebar-bg) !important;
+  border: 1px solid var(--sidebar-border) !important;
+  color: var(--text) !important;
+}
+
+.card-header {
+  background-color: var(--gray-100) !important;
+  border-bottom: 1px solid var(--sidebar-border) !important;
+  color: var(--text) !important;
+}
+
+.card-body {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--text) !important;
+}
+
+.card-footer {
+  background-color: var(--gray-100) !important;
+  border-top: 1px solid var(--sidebar-border) !important;
+  color: var(--text-muted) !important;
+}
+
+.card-title {
+  color: var(--text) !important;
+}
+
+/* Table Light variant override */
+.table-light {
+  background-color: var(--gray-100) !important;
+  color: var(--text-muted) !important;
+}
+
+.table-light th {
+  color: var(--text-muted) !important;
+}
+
+/* Button outline variants */
+.btn-outline-primary {
+  border-color: var(--primary-500) !important;
+  color: var(--primary-500) !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary-500) !important;
+  color: white !important;
+}
+
+.btn-secondary {
+  background-color: var(--gray-300) !important;
+  color: var(--text) !important;
+  border: none !important;
+}
+
+.btn-secondary:hover {
+  background-color: var(--gray-400) !important;
+}
+
+/* Bootstrap Background Utilities Override */
+.bg-light {
+  background-color: var(--gray-100) !important;
+  color: var(--text) !important;
+}
+
+.bg-primary-subtle {
+  background-color: var(--primary-100) !important;
+  color: var(--primary-500) !important;
+}
+
+.bg-success-subtle {
+  background-color: var(--success-100) !important;
+  color: var(--success-500) !important;
+}
+
+.bg-warning-subtle {
+  background-color: var(--warning-100) !important;
+  color: var(--warning-500) !important;
+}
+
+.bg-info-subtle {
+  background-color: var(--primary-100) !important;
+  color: var(--primary-500) !important;
+}
+
+/* Dropdown Menu Styling */
+.dropdown-menu {
+  background-color: var(--sidebar-bg) !important;
+  border: 1px solid var(--sidebar-border) !important;
+  color: var(--text) !important;
+}
+
+.dropdown-item {
+  color: var(--text) !important;
+}
+
+.dropdown-item:hover {
+  background-color: var(--gray-100) !important;
+  color: var(--text) !important;
+}
+
+.dropdown-item.active {
+  background-color: var(--primary-500) !important;
+  color: white !important;
+}
+
+/* Input Group */
+.input-group-text {
+  background-color: var(--gray-200) !important;
+  border: 1px solid var(--gray-300) !important;
+  color: var(--text) !important;
+}
+
+/* Spinner Color */
+.spinner-border {
+  border-color: var(--primary-500);
+  border-right-color: transparent;
+}

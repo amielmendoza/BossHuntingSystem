@@ -4,11 +4,26 @@
 
 .card {
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  background: var(--sidebar-bg);
+  border: 1px solid var(--sidebar-border);
+  color: var(--text);
 }
 
 .alert {
   border-radius: 6px;
+}
+
+.alert-warning {
+  background-color: var(--warning-100);
+  color: var(--warning-500);
+  border-color: var(--warning-500);
+}
+
+.alert-info {
+  background-color: var(--primary-100);
+  color: var(--primary-500);
+  border-color: var(--primary-500);
 }
 
 .btn {
@@ -22,7 +37,7 @@
 .modal-content {
   border-radius: 8px;
   border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
 }
 
 .modal-header {
@@ -30,13 +45,15 @@
 }
 
 .text-warning {
-  color: #856404 !important;
+  color: var(--warning-500) !important;
 }
 
 .list-group-item {
   border-radius: 6px !important;
   margin-bottom: 4px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--gray-300);
+  background-color: var(--gray-100);
+  color: var(--text);
 }
 
 .list-group-item:last-child {
